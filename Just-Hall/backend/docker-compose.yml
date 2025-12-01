@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  justhall-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: justhall-dotnet-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8000
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=justhall;User=root;Password=123456;CharSet=utf8mb4;
+    depends_on:
+      - mysql
+    volumes:
+      - ./media:/app/media
+    networks:
+      - justhall-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: justhall-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: justhall
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - justhall-network
+
+volumes:
+  mysql-data:
+
+networks:
+  justhall-network:
+    driver: bridge
