@@ -212,7 +212,12 @@ export const authAPI = {
     }
 
     const data = await response.json();
-    return { token: data.access, refresh: data.refresh, user: data.user };
+    return { 
+      token: data.access, 
+      refresh: data.refresh, 
+      user: data.user,
+      student: data.student 
+    };
   },
 
   completeProfile: async (profileData: StudentProfileUpdate, accessToken: string) => {

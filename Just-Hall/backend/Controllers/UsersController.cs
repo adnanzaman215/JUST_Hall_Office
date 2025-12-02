@@ -65,9 +65,10 @@ namespace JustHallAPI.Controllers
             await _context.SaveChangesAsync();
 
             // Create student profile if student_id or department provided
+            Student? student = null;
             if (!string.IsNullOrEmpty(request.StudentId) || !string.IsNullOrEmpty(request.Department))
             {
-                var student = new Student
+                student = new Student
                 {
                     UserId = user.Id,
                     StudentId = request.StudentId ?? string.Empty,
@@ -80,6 +81,28 @@ namespace JustHallAPI.Controllers
             // Generate tokens
             var accessToken = _jwtService.GenerateAccessToken(user);
             var refreshToken = _jwtService.GenerateRefreshToken(user);
+
+            // Prepare student DTO if student profile was created
+            StudentDto? studentDto = null;
+            if (student != null)
+            {
+                studentDto = new StudentDto
+                {
+                    StudentId = student.StudentId,
+                    Department = student.Department,
+                    Session = student.Session,
+                    RoomNo = student.RoomNo,
+                    Dob = student.Dob,
+                    Gender = student.Gender,
+                    BloodGroup = student.BloodGroup,
+                    FatherName = student.FatherName,
+                    MotherName = student.MotherName,
+                    MobileNumber = student.MobileNumber,
+                    EmergencyNumber = student.EmergencyNumber,
+                    Address = student.Address,
+                    PhotoUrl = student.PhotoUrl
+                };
+            }
 
             return Ok(new AuthResponse
             {
@@ -96,7 +119,8 @@ namespace JustHallAPI.Controllers
                     StudentId = user.StudentId,
                     Department = user.Department,
                     IsVerified = user.IsVerified
-                }
+                },
+                Student = studentDto
             });
         }
 

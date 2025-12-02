@@ -71,11 +71,36 @@ export default function SignupModal() {
 
       // Store authentication data
       storeToken(response.token);
-      storeUser(response.user);
+      
+      // Merge student data into user object with registration info
+      const userWithStudent = {
+        ...response.user,
+        full_name: response.user.full_name || fullName,
+        student_id: response.user.student_id || studentId,
+        department: response.user.department || department,
+        student: response.student || {
+          student_id: studentId,
+          department: department,
+          session: '',
+          room_no: 0,
+          dob: null,
+          gender: '',
+          blood_group: '',
+          father_name: '',
+          mother_name: '',
+          mobile_number: '',
+          emergency_number: '',
+          address: '',
+          photo_url: null,
+        },
+      };
+      
+      storeUser(userWithStudent);
 
       console.log("Registration successful:", response);
+      console.log("Stored user data:", userWithStudent);
 
-      // Close modal and redirect to profile
+      // Close modal and redirect to profile completion page
       closeSignup();
       router.push("/profile");
       

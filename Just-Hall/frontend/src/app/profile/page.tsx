@@ -48,14 +48,16 @@ export default function ProfilePage() {
       return;
     }
 
-    // Pre-fill basic user information from login data
+    // Pre-fill basic user information from login/registration data
     setFullName(user.full_name || "");
     setEmail(user.email || "");
     
-    // Pre-fill student information if available from login response
+    // Pre-fill student ID and department from user object (set during registration)
+    setStudentId(user.student_id || user.student?.student_id || "");
+    setDepartment(user.department || user.student?.department || "");
+    
+    // Pre-fill additional student information if available from login/registration response
     if (user.student) {
-      setStudentId(user.student.student_id || "");
-      setDepartment(user.student.department || "");
       setSession(user.student.session || "");
       setRoomNo(user.student.room_no?.toString() || "");
       setDob(user.student.dob || "");
@@ -67,9 +69,9 @@ export default function ProfilePage() {
       setEmergencyMobile(user.student.emergency_number || "");
       setAddress(user.student.address || "");
       setExistingPhotoUrl(user.student.photo_url || null);
-      console.log('Student data loaded from login response');
+      console.log('Student data loaded from login/registration response');
     } else {
-      console.log('No student data in login response, will fetch from API if needed');
+      console.log('No student sub-object in response, basic info already set');
     }
 
     // Function to fetch additional profile data from API if needed
@@ -231,8 +233,9 @@ export default function ProfilePage() {
       <section className="bg-gradient-to-r from-sky-700 via-cyan-700 to-teal-700 rounded-2xl p-8 text-white shadow-lg mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-extrabold">Profile Setup</h1>
-            <p className="mt-2 text-sky-100">Please complete your profile by filling in the details below.</p>
+            <h1 className="text-3xl font-extrabold">Complete Your Profile</h1>
+            <p className="mt-2 text-sky-100">Welcome! Please complete your profile to finish registration.</p>
+            <p className="mt-1 text-sm text-sky-200">All fields marked with * are required.</p>
           </div>
           <div className="text-right">
             <ClearCacheButton />
