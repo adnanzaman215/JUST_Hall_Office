@@ -48,30 +48,30 @@ export default function ProfilePage() {
       return;
     }
 
-    // Pre-fill basic user information from login/registration data
-    setFullName(user.full_name || "");
+    // Pre-fill basic user information from login data
+    setFullName(user.fullName || "");
     setEmail(user.email || "");
+    setStudentId(user.studentId || "");
+    setDepartment(user.department || "");
     
-    // Pre-fill student ID and department from user object (set during registration)
-    setStudentId(user.student_id || user.student?.student_id || "");
-    setDepartment(user.department || user.student?.department || "");
-    
-    // Pre-fill additional student information if available from login/registration response
+    // Pre-fill student information if available from login response
     if (user.student) {
+      setStudentId(user.student.studentId || user.studentId || "");
+      setDepartment(user.student.department || user.department || "");
       setSession(user.student.session || "");
-      setRoomNo(user.student.room_no?.toString() || "");
+      setRoomNo(user.student.roomNo?.toString() || "");
       setDob(user.student.dob || "");
       setGender(user.student.gender || "");
-      setBloodGroup(user.student.blood_group || "");
-      setFatherName(user.student.father_name || "");
-      setMatherName(user.student.mother_name || "");
-      setMobile(user.student.mobile_number || "");
-      setEmergencyMobile(user.student.emergency_number || "");
+      setBloodGroup(user.student.bloodGroup || "");
+      setFatherName(user.student.fatherName || "");
+      setMatherName(user.student.motherName || "");
+      setMobile(user.student.mobileNumber || "");
+      setEmergencyMobile(user.student.emergencyNumber || "");
       setAddress(user.student.address || "");
-      setExistingPhotoUrl(user.student.photo_url || null);
-      console.log('Student data loaded from login/registration response');
+      setExistingPhotoUrl(user.student.photoUrl || null);
+      console.log('Student data loaded from login response');
     } else {
-      console.log('No student sub-object in response, basic info already set');
+      console.log('No student data in login response, will fetch from API if needed');
     }
 
     // Function to fetch additional profile data from API if needed
@@ -85,19 +85,19 @@ export default function ProfilePage() {
             const student = profileData.student;
             // Only update fields that weren't already set from login response
             if (!user?.student) {
-              setStudentId(student.student_id || "");
+              setStudentId(student.studentId || "");
               setDepartment(student.department || "");
               setSession(student.session || "");
-              setRoomNo(student.room_no?.toString() || "");
+              setRoomNo(student.roomNo?.toString() || "");
               setDob(student.dob || "");
               setGender(student.gender || "");
-              setBloodGroup(student.blood_group || "");
-              setFatherName(student.father_name || "");
-              setMatherName(student.mother_name || "");
-              setMobile(student.mobile_number || "");
-              setEmergencyMobile(student.emergency_number || "");
+              setBloodGroup(student.bloodGroup || "");
+              setFatherName(student.fatherName || "");
+              setMatherName(student.motherName || "");
+              setMobile(student.mobileNumber || "");
+              setEmergencyMobile(student.emergencyNumber || "");
               setAddress(student.address || "");
-              setExistingPhotoUrl(student.photo_url || null);
+              setExistingPhotoUrl(student.photoUrl || null);
             }
           }
         }
@@ -159,17 +159,17 @@ export default function ProfilePage() {
     
     // Add text fields
     formData.append('email', email);
-    formData.append('student_id', studentId);
+    formData.append('studentId', studentId);
     formData.append('department', department);
     formData.append('session', session);
-    formData.append('room_no', roomNo);
+    formData.append('roomNo', roomNo);
     formData.append('dob', dob);
     formData.append('gender', gender);
-    formData.append('blood_group', bloodGroup || '');
-    formData.append('father_name', fatherName || '');
-    formData.append('mother_name', motherName || '');
-    formData.append('mobile_number', mobile);
-    formData.append('emergency_number', emergencyMobile);
+    formData.append('bloodGroup', bloodGroup || '');
+    formData.append('fatherName', fatherName || '');
+    formData.append('motherName', motherName || '');
+    formData.append('mobileNumber', mobile);
+    formData.append('emergencyNumber', emergencyMobile);
     formData.append('address', address);
     
     // Add photo if selected
@@ -191,16 +191,16 @@ export default function ProfilePage() {
         if (currentUser) {
           const updatedUser = {
             ...currentUser,
-            full_name: fullName,
-            student_id: studentId,
+            fullName: fullName,
+            studentId: studentId,
             department: department,
-            is_verified: true,
-            student_profile: {
-              student_id: studentId,
+            isVerified: true,
+            studentProfile: {
+              studentId: studentId,
               department: department,
               session: session,
-              room_no: parseInt(roomNo),
-              photo_url: response.photo_url || null
+              roomNo: parseInt(roomNo),
+              photoUrl: response.photoUrl || null
             }
           };
           storeUser(updatedUser);
@@ -233,9 +233,8 @@ export default function ProfilePage() {
       <section className="bg-gradient-to-r from-sky-700 via-cyan-700 to-teal-700 rounded-2xl p-8 text-white shadow-lg mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-extrabold">Complete Your Profile</h1>
-            <p className="mt-2 text-sky-100">Welcome! Please complete your profile to finish registration.</p>
-            <p className="mt-1 text-sm text-sky-200">All fields marked with * are required.</p>
+            <h1 className="text-3xl font-extrabold">Profile Setup</h1>
+            <p className="mt-2 text-sky-100">Please complete your profile by filling in the details below.</p>
           </div>
           <div className="text-right">
             <ClearCacheButton />

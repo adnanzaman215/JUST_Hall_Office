@@ -372,6 +372,111 @@ namespace JustHallAPI.Controllers
             });
         }
 
+        // PUT/PATCH: api/users/auth/profile
+        [HttpPut("profile")]
+        [HttpPatch("profile")]
+        [Authorize]
+        public async Task<ActionResult<ProfileResponse>> UpdateProfileDirect([FromBody] CompleteProfileRequest request)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            
+            var user = await _context.Users
+                .Include(u => u.Student)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+                return NotFound(new { error = "User not found" });
+
+            if (user.Student == null)
+                return NotFound(new { error = "Profile not found. Please complete your profile first." });
+
+            var student = user.Student;
+            if (!string.IsNullOrEmpty(request.StudentId)) student.StudentId = request.StudentId;
+            if (!string.IsNullOrEmpty(request.Department)) student.Department = request.Department;
+            if (!string.IsNullOrEmpty(request.Session)) student.Session = request.Session;
+            if (request.RoomNo.HasValue) student.RoomNo = request.RoomNo.Value;
+            if (request.Dob.HasValue) student.Dob = request.Dob;
+            if (!string.IsNullOrEmpty(request.Gender)) student.Gender = request.Gender;
+            if (!string.IsNullOrEmpty(request.BloodGroup)) student.BloodGroup = request.BloodGroup;
+            if (!string.IsNullOrEmpty(request.FatherName)) student.FatherName = request.FatherName;
+            if (!string.IsNullOrEmpty(request.MotherName)) student.MotherName = request.MotherName;
+            if (!string.IsNullOrEmpty(request.MobileNumber)) student.MobileNumber = request.MobileNumber;
+            if (!string.IsNullOrEmpty(request.EmergencyNumber)) student.EmergencyNumber = request.EmergencyNumber;
+            if (!string.IsNullOrEmpty(request.Address)) student.Address = request.Address;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new ProfileResponse
+            {
+                User = new UserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    Username = user.Username,
+                    FullName = user.FullName,
+                    Role = user.Role,
+                    IsVerified = user.IsVerified
+                },
+                Student = new StudentDto
+                {
+                    StudentId = student.StudentId,
+                    Department = student.Department,
+                    Session = student.Session,
+                    RoomNo = student.RoomNo,
+                    Dob = student.Dob,
+                    Gender = student.Gender,
+                    BloodGroup = student.BloodGroup,
+                    FatherName = student.FatherName,
+                    MotherName = student.MotherName,
+                    MobileNumber = student.MobileNumber,
+                    EmergencyNumber = student.EmergencyNumber,
+                    Address = student.Address,
+                    PhotoUrl = student.PhotoUrl
+                }
+            });
+        }
+
+        // POST: api/users/auth/upload-profile-picture
+        [HttpPost("upload-profile-picture")]
+        [Authorize]
+        public async Task<ActionResult> UploadProfilePicture([FromForm] IFormFile profile_picture)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == userId);
+
+            if (student == null)
+                return NotFound(new { error = "Profile not found. Please complete your profile first." });
+
+            if (profile_picture == null || profile_picture.Length == 0)
+                return BadRequest(new { error = "No file uploaded" });
+
+            // Validate file type
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+            var extension = Path.GetExtension(profile_picture.FileName).ToLower();
+            if (!allowedExtensions.Contains(extension))
+                return BadRequest(new { error = "Invalid file type. Only JPG, PNG, and GIF are allowed." });
+
+            // Validate file size (5MB max)
+            if (profile_picture.Length > 5 * 1024 * 1024)
+                return BadRequest(new { error = "File size exceeds 5MB limit" });
+
+            var fileName = $"{Guid.NewGuid()}_{profile_picture.FileName}";
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
+            Directory.CreateDirectory(uploadsFolder);
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await profile_picture.CopyToAsync(stream);
+            }
+
+            student.PhotoUrl = $"profile_photos/{fileName}";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { photoUrl = student.PhotoUrl });
+        }
+
         // PUT/PATCH: api/users/auth/profile/update
         [HttpPut("profile/update")]
         [HttpPatch("profile/update")]
