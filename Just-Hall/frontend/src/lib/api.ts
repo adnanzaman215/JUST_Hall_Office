@@ -15,16 +15,16 @@ function join(base: string, endpoint: string) {
 
 export interface StudentProfile {
   session: string;
-  room_no: number;               // backend uses integer (0 default)
+  roomNo: number;               // backend uses integer (0 default)
   dob: string | null;            // "YYYY-MM-DD" or null
   gender: string;
-  blood_group: string;
-  father_name: string;
-  mother_name: string;
-  mobile_number: string;
-  emergency_number: string;
+  bloodGroup: string;
+  fatherName: string;
+  motherName: string;
+  mobileNumber: string;
+  emergencyNumber: string;
   address: string;
-  photo_url?: string | null;     // ImageField URL or null
+  photoUrl?: string | null;     // ImageField URL or null
 }
 
 export type StudentProfileUpdate =
@@ -37,10 +37,10 @@ export interface ProfileResponse {
 export interface AuthUser {
   id: string | number;
   email: string;
-  full_name?: string;
-  student_id?: string;
+  fullName?: string;
+  studentId?: string;
   department?: string;
-  is_verified?: boolean;
+  isVerified?: boolean;
   student?: StudentProfile | null;
 }
 
@@ -51,7 +51,7 @@ export interface AuthTokensResponse {
 }
 
 export interface UploadPhotoResponse {
-  photo_url: string;
+  photoUrl: string;
 }
 
 /* ================== CORE REQUEST ================== */
@@ -180,8 +180,8 @@ export const authAPI = {
   },
 
   register: async (userData: {
-    full_name: string;
-    student_id: string;
+    fullName: string;
+    studentId: string;
     department: string;
     email: string;
     password: string;

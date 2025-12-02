@@ -8,62 +8,62 @@ import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 /* ---------------- Types ---------------- */
 interface User {
   id: string;
-  full_name: string;
-  student_id?: string;   // make optional (older payloads may not include)
+  fullName: string;
+  studentId?: string;   // make optional (older payloads may not include)
   department?: string;   // make optional
   email: string;
-  is_verified?: boolean;
+  isVerified?: boolean;
 }
 
-/** Extend backend StudentProfile type to also carry optional student_id/department if returned */
+/** Extend backend StudentProfile type to also carry optional studentId/department if returned */
 type ApiStudentProfile = ApiStudentProfileBase & {
-  student_id?: string;
+  studentId?: string;
   department?: string;
 };
 
 /* ---------------- Form-only type (never stores nulls in inputs) ---------------- */
 type StudentProfileForm = {
   session: string;
-  room_no: number | null; // allow empty in UI as null
+  roomNo: number | null; // allow empty in UI as null
   dob: string;            // UI keeps string ("" when empty)
   gender: string;
-  blood_group: string;
-  father_name: string;
-  mother_name: string;
-  mobile_number: string;
-  emergency_number: string;
+  bloodGroup: string;
+  fatherName: string;
+  motherName: string;
+  mobileNumber: string;
+  emergencyNumber: string;
   address: string;
-  photo_url?: string | null;
+  photoUrl?: string | null;
 };
 
 const EMPTY_FORM: StudentProfileForm = {
   session: "",
-  room_no: null,
+  roomNo: null,
   dob: "",
   gender: "",
-  blood_group: "",
-  father_name: "",
-  mother_name: "",
-  mobile_number: "",
-  emergency_number: "",
+  bloodGroup: "",
+  fatherName: "",
+  motherName: "",
+  mobileNumber: "",
+  emergencyNumber: "",
   address: "",
-  photo_url: null,
+  photoUrl: null,
 };
 
 // Canonical "empty" API copy (for display)
 const EMPTY_API_PROFILE: ApiStudentProfile = {
   session: "",
-  room_no: 0,
+  roomNo: 0,
   dob: null,
   gender: "",
-  blood_group: "",
-  father_name: "",
-  mother_name: "",
-  mobile_number: "",
-  emergency_number: "",
+  bloodGroup: "",
+  fatherName: "",
+  motherName: "",
+  mobileNumber: "",
+  emergencyNumber: "",
   address: "",
-  photo_url: null,
-  student_id: undefined,
+  photoUrl: null,
+  studentId: undefined,
   department: undefined,
 };
 
@@ -72,36 +72,43 @@ function normalizeApiProfile(p?: ApiStudentProfile | null): ApiStudentProfile {
   // Ensure we always hold a complete, non-undefined object in state
   return {
     session: p?.session ?? "",
-    room_no: typeof p?.room_no === "number" ? p!.room_no : 0,
+    roomNo: typeof p?.roomNo === "number" ? p!.roomNo : 0,
     dob: p?.dob ?? null,
     gender: p?.gender ?? "",
-    blood_group: p?.blood_group ?? "",
-    father_name: p?.father_name ?? "",
-    mother_name: p?.mother_name ?? "",
-    mobile_number: p?.mobile_number ?? "",
-    emergency_number: p?.emergency_number ?? "",
+    bloodGroup: p?.bloodGroup ?? "",
+    fatherName: p?.fatherName ?? "",
+    motherName: p?.motherName ?? "",
+    mobileNumber: p?.mobileNumber ?? "",
+    emergencyNumber: p?.emergencyNumber ?? "",
     address: p?.address ?? "",
-    photo_url: p?.photo_url ?? null,
+    photoUrl: p?.photoUrl ?? null,
     // carry these if present from backend
-    student_id: p?.student_id,
+    studentId: p?.studentId,
     department: p?.department,
   };
 }
 
 function normalizeToForm(p?: ApiStudentProfile | null): StudentProfileForm {
   if (!p) return { ...EMPTY_FORM };
+  
+  // Format date by removing time component if present
+  let formattedDob = p.dob ?? "";
+  if (formattedDob && formattedDob.includes('T')) {
+    formattedDob = formattedDob.split('T')[0];
+  }
+  
   return {
     session: p.session ?? "",
-    room_no: p.room_no === 0 ? null : p.room_no ?? null,
-    dob: p.dob ?? "", // null -> ""
+    roomNo: p.roomNo === 0 ? null : p.roomNo ?? null,
+    dob: formattedDob, // null -> ""
     gender: p.gender ?? "",
-    blood_group: p.blood_group ?? "",
-    father_name: p.father_name ?? "",
-    mother_name: p.mother_name ?? "",
-    mobile_number: p.mobile_number ?? "",
-    emergency_number: p.emergency_number ?? "",
+    bloodGroup: p.bloodGroup ?? "",
+    fatherName: p.fatherName ?? "",
+    motherName: p.motherName ?? "",
+    mobileNumber: p.mobileNumber ?? "",
+    emergencyNumber: p.emergencyNumber ?? "",
     address: p.address ?? "",
-    photo_url: p.photo_url ?? null,
+    photoUrl: p.photoUrl ?? null,
   };
 }
 
@@ -109,16 +116,16 @@ function normalizeToForm(p?: ApiStudentProfile | null): StudentProfileForm {
 function toUpdatePayload(form: StudentProfileForm) {
   return {
     session: form.session,
-    room_no: form.room_no ?? 0,                  // backend default is 0
+    roomNo: form.roomNo ?? 0,                  // backend default is 0
     dob: form.dob === "" ? null : form.dob,      // "" -> null
     gender: form.gender,
-    blood_group: form.blood_group,
-    father_name: form.father_name,
-    mother_name: form.mother_name,
-    mobile_number: form.mobile_number,
-    emergency_number: form.emergency_number,
+    bloodGroup: form.bloodGroup,
+    fatherName: form.fatherName,
+    motherName: form.motherName,
+    mobileNumber: form.mobileNumber,
+    emergencyNumber: form.emergencyNumber,
     address: form.address,
-    // photo_url is handled via upload endpoint
+    // photoUrl is handled via upload endpoint
   };
 }
 
@@ -137,9 +144,9 @@ export default function MyProfilePage() {
 
   // Derived display helpers
   const displayRoom = useMemo(() => {
-    const v = studentProfile.room_no;
+    const v = studentProfile.roomNo;
     return v === null || v === undefined || v === 0 ? "Not provided" : String(v);
-  }, [studentProfile.room_no]);
+  }, [studentProfile.roomNo]);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -242,19 +249,31 @@ export default function MyProfilePage() {
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Numeric/nullable handler for room_no
+  // Numeric/nullable handler for roomNo
   const handleRoomChange = (raw: string) => {
     const trimmed = raw.trim();
     if (trimmed === "") {
-      handleInputChange("room_no", null);
+      handleInputChange("roomNo", null);
       return;
     }
     const n = Number(trimmed);
-    handleInputChange("room_no", Number.isFinite(n) ? n : null);
+    handleInputChange("roomNo", Number.isFinite(n) ? n : null);
   };
 
   // Read-mode helper for DOB
   const dobValue = isEditing ? editForm.dob : (studentProfile.dob ?? "");
+  
+  // Format date for display (remove time component)
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    // If it's an ISO datetime, extract just the date part
+    if (dateStr.includes('T')) {
+      return dateStr.split('T')[0];
+    }
+    return dateStr;
+  };
+  
+  const displayDob = formatDate(studentProfile.dob);
 
   if (loading) {
     return (
@@ -338,19 +357,19 @@ export default function MyProfilePage() {
 
             <div className="flex items-center gap-6">
               <ProfilePictureUpload
-                currentPhotoUrl={studentProfile.photo_url ?? undefined}
+                currentPhotoUrl={studentProfile.photoUrl ?? undefined}
                 onUploadSuccess={(photoUrl) => {
-                  setStudentProfile((prev) => ({ ...prev, photo_url: photoUrl }));
+                  setStudentProfile((prev) => ({ ...prev, photoUrl: photoUrl }));
                 }}
               />
 
               <div className="flex-1">
                 <h4 className="text-sm font-medium text-gray-900">
-                  {user?.full_name || "User"}
+                  {user?.fullName || "User"}
                 </h4>
                 <p className="text-sm text-gray-500">{user?.email}</p>
                 <p className="text-sm text-gray-500">
-                  {(user?.student_id || studentProfile.student_id || "—")} • {(user?.department || studentProfile.department || "—")}
+                  {(user?.studentId || studentProfile.studentId || "—")} • {(user?.department || studentProfile.department || "—")}
                 </p>
               </div>
             </div>
@@ -367,10 +386,10 @@ export default function MyProfilePage() {
                   Basic Information
                 </h3>
 
-                <LabeledValue label="Full Name" value={user?.full_name || "Not provided"} />
+                <LabeledValue label="Full Name" value={user?.fullName || "Not provided"} />
                 <LabeledValue
                   label="Student ID"
-                  value={user?.student_id || studentProfile.student_id || "Not provided"}
+                  value={user?.studentId || studentProfile.studentId || "Not provided"}
                 />
                 <LabeledValue
                   label="Department"
@@ -404,7 +423,7 @@ export default function MyProfilePage() {
                   {isEditing ? (
                     <input
                       type="number"
-                      value={editForm.room_no ?? ""}
+                      value={editForm.roomNo ?? ""}
                       onChange={(e) => handleRoomChange(e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="e.g., 101"
@@ -437,7 +456,7 @@ export default function MyProfilePage() {
                     />
                   ) : (
                     <div className="p-3 bg-gray-50 rounded-lg text-gray-900">
-                      {dobValue || "Not provided"}
+                      {displayDob || "Not provided"}
                     </div>
                   )}
                 </div>
@@ -470,8 +489,8 @@ export default function MyProfilePage() {
                   </label>
                   {isEditing ? (
                     <select
-                      value={editForm.blood_group}
-                      onChange={(e) => handleInputChange("blood_group", e.target.value)}
+                      value={editForm.bloodGroup}
+                      onChange={(e) => handleInputChange("bloodGroup", e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Blood Group</option>
@@ -486,7 +505,7 @@ export default function MyProfilePage() {
                     </select>
                   ) : (
                     <div className="p-3 bg-gray-50 rounded-lg text-gray-900">
-                      {studentProfile.blood_group || "Not provided"}
+                      {studentProfile.bloodGroup || "Not provided"}
                     </div>
                   )}
                 </div>
@@ -498,14 +517,14 @@ export default function MyProfilePage() {
                   {isEditing ? (
                     <input
                       type="text"
-                      value={editForm.father_name}
-                      onChange={(e) => handleInputChange("father_name", e.target.value)}
+                      value={editForm.fatherName}
+                      onChange={(e) => handleInputChange("fatherName", e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Father's full name"
                     />
                   ) : (
                     <div className="p-3 bg-gray-50 rounded-lg text-gray-900">
-                      {studentProfile.father_name || "Not provided"}
+                      {studentProfile.fatherName || "Not provided"}
                     </div>
                   )}
                 </div>
@@ -517,14 +536,14 @@ export default function MyProfilePage() {
                   {isEditing ? (
                     <input
                       type="text"
-                      value={editForm.mother_name}
-                      onChange={(e) => handleInputChange("mother_name", e.target.value)}
+                      value={editForm.motherName}
+                      onChange={(e) => handleInputChange("motherName", e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Mother's full name"
                     />
                   ) : (
                     <div className="p-3 bg-gray-50 rounded-lg text-gray-900">
-                      {studentProfile.mother_name || "Not provided"}
+                      {studentProfile.motherName || "Not provided"}
                     </div>
                   )}
                 </div>
@@ -536,14 +555,14 @@ export default function MyProfilePage() {
                   {isEditing ? (
                     <input
                       type="tel"
-                      value={editForm.mobile_number}
-                      onChange={(e) => handleInputChange("mobile_number", e.target.value)}
+                      value={editForm.mobileNumber}
+                      onChange={(e) => handleInputChange("mobileNumber", e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="e.g., +880123456789"
                     />
                   ) : (
                     <div className="p-3 bg-gray-50 rounded-lg text-gray-900">
-                      {studentProfile.mobile_number || "Not provided"}
+                      {studentProfile.mobileNumber || "Not provided"}
                     </div>
                   )}
                 </div>
@@ -559,14 +578,14 @@ export default function MyProfilePage() {
                 {isEditing ? (
                   <input
                     type="tel"
-                    value={editForm.emergency_number}
-                    onChange={(e) => handleInputChange("emergency_number", e.target.value)}
+                    value={editForm.emergencyNumber}
+                    onChange={(e) => handleInputChange("emergencyNumber", e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Emergency contact number"
                   />
                 ) : (
                   <div className="p-3 bg-gray-50 rounded-lg text-gray-900">
-                    {studentProfile.emergency_number || "Not provided"}
+                    {studentProfile.emergencyNumber || "Not provided"}
                   </div>
                 )}
               </div>

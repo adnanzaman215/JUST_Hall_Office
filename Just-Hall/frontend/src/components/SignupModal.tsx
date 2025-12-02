@@ -50,8 +50,8 @@ export default function SignupModal() {
 
       // Call registration API
       console.log('About to call authAPI.register with data:', {
-        full_name: fullName,
-        student_id: studentId,
+        fullName: fullName,
+        studentId: studentId,
         department,
         email,
         password: pw,
@@ -59,8 +59,8 @@ export default function SignupModal() {
       });
       
       const response = await authAPI.register({
-        full_name: fullName,
-        student_id: studentId,
+        fullName: fullName,
+        studentId: studentId,
         department,
         email,
         password: pw,

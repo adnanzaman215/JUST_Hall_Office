@@ -2,34 +2,34 @@
 export interface User {
   id: string;
   email: string;
-  full_name: string;
-  student_id: string;
+  fullName: string;
+  studentId: string;
   department: string;
-  is_admin?: boolean;
-  is_superuser?: boolean;
-  is_verified?: boolean;
+  isAdmin?: boolean;
+  isSuperuser?: boolean;
+  isVerified?: boolean;
   role?: string;
-  student_profile?: {
-    student_id: string;
+  studentProfile?: {
+    studentId: string;
     department: string;
     session: string;
-    room_no: number;
-    photo_url?: string;
+    roomNo: number;
+    photoUrl?: string;
   };
   student?: {
-    student_id: string;
+    studentId: string;
     department: string;
     session: string;
-    room_no: number;
+    roomNo: number;
     dob: string;
     gender: string;
-    blood_group: string;
-    father_name: string;
-    mother_name: string;
-    mobile_number: string;
-    emergency_number: string;
+    bloodGroup: string;
+    fatherName: string;
+    motherName: string;
+    mobileNumber: string;
+    emergencyNumber: string;
     address: string;
-    photo_url?: string;
+    photoUrl?: string;
   };
 }
 

@@ -51,19 +51,19 @@ export default function ProfilePictureUpload({
       const response = await authAPI.uploadProfilePicture(file, token);
       
       // Update user context with new photo URL
-      if (user && response.photo_url) {
+      if (user && response.photoUrl) {
         const updatedUser = {
           ...user,
-          student_profile: {
-            student_id: user.student_profile?.student_id || '',
-            department: user.student_profile?.department || '',
-            session: user.student_profile?.session || '',
-            room_no: user.student_profile?.room_no || 0,
-            photo_url: response.photo_url
+          studentProfile: {
+            studentId: user.studentProfile?.studentId || '',
+            department: user.studentProfile?.department || '',
+            session: user.studentProfile?.session || '',
+            roomNo: user.studentProfile?.roomNo || 0,
+            photoUrl: response.photoUrl
           }
         };
         updateUser(updatedUser);
-        onUploadSuccess?.(response.photo_url);
+        onUploadSuccess?.(response.photoUrl);
       }
       
       alert('Profile picture uploaded successfully!');
