@@ -187,13 +187,23 @@ export const authAPI = {
     password: string;
     role: string;
   }) => {
+    // Convert snake_case to camelCase for .NET API
+    const payload = {
+      fullName: userData.full_name,
+      studentId: userData.student_id,
+      department: userData.department,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role,
+    };
+
     // Use the Next.js API proxy route instead of calling backend directly
     const response = await fetch("/api/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
