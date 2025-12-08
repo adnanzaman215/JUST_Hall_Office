@@ -358,8 +358,14 @@ export default function MyProfilePage() {
             <div className="flex items-center gap-6">
               <ProfilePictureUpload
                 currentPhotoUrl={studentProfile.photoUrl ?? undefined}
-                onUploadSuccess={(photoUrl) => {
+                onUploadSuccess={async (photoUrl) => {
+                  // Update local state immediately
                   setStudentProfile((prev) => ({ ...prev, photoUrl: photoUrl }));
+                  // Refetch profile to ensure data is in sync
+                  const token = getStoredToken();
+                  if (token) {
+                    await fetchProfile(token);
+                  }
                 }}
               />
 

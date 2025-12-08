@@ -7,7 +7,9 @@ export function getFullMediaUrl(relativePath?: string | null): string | null {
     return relativePath;
   }
   
-  // Construct full URL
+  // Construct full URL - backend serves media files at /media/
   const baseUrl = 'http://localhost:8000';
-  return `${baseUrl}${relativePath.startsWith('/') ? '' : '/'}${relativePath}`;
+  // Remove leading slash if present, then prepend /media/
+  const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
+  return `${baseUrl}/media/${cleanPath}`;
 }

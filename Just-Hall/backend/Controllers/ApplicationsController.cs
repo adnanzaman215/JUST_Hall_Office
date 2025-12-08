@@ -39,7 +39,13 @@ namespace JustHallAPI.Controllers
                 Mobile = a.Mobile,
                 Email = a.Email,
                 Address = a.Address,
+                FatherName = a.FatherName,
+                MotherName = a.MotherName,
+                FatherOccupation = a.FatherOccupation,
+                MotherOccupation = a.MotherOccupation,
+                HouseholdIncome = a.HouseholdIncome,
                 PaymentSlipNo = a.PaymentSlipNo,
+                PaymentSlipUrl = a.PaymentSlipUrl,
                 Status = a.Status,
                 CreatedAt = a.CreatedAt
             }).ToList();
@@ -70,7 +76,13 @@ namespace JustHallAPI.Controllers
                 Mobile = request.Mobile,
                 Email = request.Email,
                 Address = request.Address,
+                FatherName = request.FatherName,
+                MotherName = request.MotherName,
+                FatherOccupation = request.FatherOccupation,
+                MotherOccupation = request.MotherOccupation,
+                HouseholdIncome = request.HouseholdIncome,
                 PaymentSlipNo = request.PaymentSlipNo,
+                PaymentSlipUrl = request.PaymentSlipUrl,
                 Status = "Pending",
                 CreatedAt = DateTime.UtcNow
             };
@@ -90,7 +102,13 @@ namespace JustHallAPI.Controllers
                 Mobile = application.Mobile,
                 Email = application.Email,
                 Address = application.Address,
+                FatherName = application.FatherName,
+                MotherName = application.MotherName,
+                FatherOccupation = application.FatherOccupation,
+                MotherOccupation = application.MotherOccupation,
+                HouseholdIncome = application.HouseholdIncome,
                 PaymentSlipNo = application.PaymentSlipNo,
+                PaymentSlipUrl = application.PaymentSlipUrl,
                 Status = application.Status,
                 CreatedAt = application.CreatedAt
             };
@@ -126,12 +144,49 @@ namespace JustHallAPI.Controllers
                 Mobile = application.Mobile,
                 Email = application.Email,
                 Address = application.Address,
+                FatherName = application.FatherName,
+                MotherName = application.MotherName,
+                FatherOccupation = application.FatherOccupation,
+                MotherOccupation = application.MotherOccupation,
+                HouseholdIncome = application.HouseholdIncome,
                 PaymentSlipNo = application.PaymentSlipNo,
+                PaymentSlipUrl = application.PaymentSlipUrl,
                 Status = application.Status,
                 CreatedAt = application.CreatedAt
             };
 
             return Ok(applicationDto);
+        }
+
+        // POST: api/applications/upload-payment-slip
+        [HttpPost("upload-payment-slip")]
+        [AllowAnonymous]
+        public async Task<ActionResult> UploadPaymentSlip([FromForm] IFormFile payment_slip)
+        {
+            if (payment_slip == null || payment_slip.Length == 0)
+                return BadRequest(new { error = "No file uploaded" });
+
+            // Validate file type
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
+            var extension = Path.GetExtension(payment_slip.FileName).ToLower();
+            if (!allowedExtensions.Contains(extension))
+                return BadRequest(new { error = "Invalid file type. Only JPG, PNG, and PDF are allowed." });
+
+            // Validate file size (5MB max)
+            if (payment_slip.Length > 5 * 1024 * 1024)
+                return BadRequest(new { error = "File size exceeds 5MB limit" });
+
+            var fileName = $"{Guid.NewGuid()}_{payment_slip.FileName}";
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "payment_slips");
+            Directory.CreateDirectory(uploadsFolder);
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await payment_slip.CopyToAsync(stream);
+            }
+
+            return Ok(new { paymentSlipUrl = $"payment_slips/{fileName}" });
         }
     }
 }

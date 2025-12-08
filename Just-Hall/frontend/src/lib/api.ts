@@ -187,10 +187,10 @@ export const authAPI = {
     password: string;
     role: string;
   }) => {
-    // Convert snake_case to camelCase for .NET API
+    // Convert to camelCase for .NET API
     const payload = {
-      fullName: userData.full_name,
-      studentId: userData.student_id,
+      fullName: userData.fullName,
+      studentId: userData.studentId,
       department: userData.department,
       email: userData.email,
       password: userData.password,
@@ -347,33 +347,26 @@ export const authAPI = {
   },
 
   /**
-   * Robust upload that tries several common routes:
-   *  - /users/auth/upload-profile-picture/
-   *  - /users/upload-profile-picture/
-   *  - /users/auth/profile/upload-profile-picture/
-   *  - /users/auth/profile/photo/
+   * Upload profile picture via Next.js API proxy route
    */
   uploadProfilePicture: async (file: File, accessToken: string) => {
-    const candidates = [
-      "/users/auth/upload-profile-picture/",
-      "/users/upload-profile-picture/",
-      "/users/auth/profile/upload-profile-picture/",
-      "/users/auth/profile/photo/",
-    ];
+    const formData = new FormData();
+    formData.append("profile_picture", file);
 
-    const attempts = candidates.map((path) => {
-      const url = join(API_BASE_URL, path);
-      const formData = new FormData();
-      formData.append("profile_picture", file);
-      return () =>
-        fetch(url, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${accessToken}` }, // no content-type; browser sets boundary
-          body: formData,
-        });
+    const response = await fetch("/api/upload-profile-picture", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+      },
+      body: formData,
     });
 
-    return tryJsonSequence<UploadPhotoResponse>(attempts);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || "Profile picture upload failed");
+    }
+
+    return await response.json();
   },
 
   forgotPassword: async (email: string) => {

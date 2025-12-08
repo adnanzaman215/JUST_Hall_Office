@@ -50,28 +50,30 @@ export default function ProfilePictureUpload({
     try {
       const response = await authAPI.uploadProfilePicture(file, token);
       
+      console.log('Upload response:', response);
+      
       // Update user context with new photo URL
       if (user && response.photoUrl) {
         const updatedUser = {
           ...user,
-          studentProfile: {
-            studentId: user.studentProfile?.studentId || '',
-            department: user.studentProfile?.department || '',
-            session: user.studentProfile?.session || '',
-            roomNo: user.studentProfile?.roomNo || 0,
+          student: {
+            ...(user.student || {}),
             photoUrl: response.photoUrl
           }
         };
         updateUser(updatedUser);
-        onUploadSuccess?.(response.photoUrl);
+        console.log('Updated user with photo:', updatedUser);
       }
+      
+      // Call the success callback to update parent component state
+      onUploadSuccess?.(response.photoUrl);
       
       alert('Profile picture uploaded successfully!');
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload profile picture. Please try again.');
+      alert(`Failed to upload profile picture: ${error instanceof Error ? error.message : 'Unknown error'}`);
       // Reset preview on error
-      setPreviewUrl(currentPhotoUrl || null);
+      setPreviewUrl(getFullMediaUrl(currentPhotoUrl));
     } finally {
       setUploading(false);
     }

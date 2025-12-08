@@ -12,7 +12,13 @@ namespace JustHallAPI.DTOs
         public string Mobile { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
+        public string FatherName { get; set; } = string.Empty;
+        public string MotherName { get; set; } = string.Empty;
+        public string? FatherOccupation { get; set; }
+        public string? MotherOccupation { get; set; }
+        public decimal? HouseholdIncome { get; set; }
         public string PaymentSlipNo { get; set; } = string.Empty;
+        public string? PaymentSlipUrl { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
     }
@@ -28,7 +34,13 @@ namespace JustHallAPI.DTOs
         public string Mobile { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
+        public string FatherName { get; set; } = string.Empty;
+        public string MotherName { get; set; } = string.Empty;
+        public string? FatherOccupation { get; set; }
+        public string? MotherOccupation { get; set; }
+        public decimal? HouseholdIncome { get; set; }
         public string PaymentSlipNo { get; set; } = string.Empty;
+        public string? PaymentSlipUrl { get; set; }
     }
 
     public class UpdateApplicationStatusRequest

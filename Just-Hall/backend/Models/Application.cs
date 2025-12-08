@@ -54,9 +54,34 @@ namespace JustHallAPI.Models
         public string Address { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(150)]
+        [Column("father_name")]
+        public string FatherName { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(150)]
+        [Column("mother_name")]
+        public string MotherName { get; set; } = string.Empty;
+
+        [MaxLength(100)]
+        [Column("father_occupation")]
+        public string? FatherOccupation { get; set; }
+
+        [MaxLength(100)]
+        [Column("mother_occupation")]
+        public string? MotherOccupation { get; set; }
+
+        [Column("household_income")]
+        public decimal? HouseholdIncome { get; set; }
+
+        [Required]
         [MaxLength(100)]
         [Column("payment_slip_no")]
         public string PaymentSlipNo { get; set; } = string.Empty;
+
+        [MaxLength(255)]
+        [Column("payment_slip_url")]
+        public string? PaymentSlipUrl { get; set; }
 
         [Required]
         [MaxLength(20)]
