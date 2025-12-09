@@ -12,6 +12,8 @@ namespace JustHallAPI.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Student> Students { get; set; }
+        public DbSet<Staff> Staff { get; set; }
+        public DbSet<Admin> Admins { get; set; }
         public DbSet<Application> Applications { get; set; }
         public DbSet<Notice> Notices { get; set; }
 
@@ -39,6 +41,32 @@ namespace JustHallAPI.Data
                 entity.ToTable("users_student");
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.StudentId).IsUnique();
+            });
+
+            // Staff configuration
+            modelBuilder.Entity<Staff>(entity =>
+            {
+                entity.ToTable("users_staff");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.EmployeeId).IsUnique();
+                
+                entity.HasOne(s => s.User)
+                    .WithOne()
+                    .HasForeignKey<Staff>(s => s.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Admin configuration
+            modelBuilder.Entity<Admin>(entity =>
+            {
+                entity.ToTable("users_admin");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.AdminId).IsUnique();
+                
+                entity.HasOne(a => a.User)
+                    .WithOne()
+                    .HasForeignKey<Admin>(a => a.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Application configuration

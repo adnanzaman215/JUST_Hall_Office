@@ -39,7 +39,22 @@ export async function POST(request: NextRequest) {
     console.log('📡 Proxy: Backend response status:', backendResponse.status);
 
     if (!backendResponse.ok) {
-      const errorData = await backendResponse.json();
+      let errorData;
+      const contentType = backendResponse.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        errorData = await backendResponse.json();
+      } else {
+        // Backend returned HTML error page
+        const errorText = await backendResponse.text();
+        console.log('❌ Proxy: Backend error (non-JSON):', errorText.substring(0, 500));
+        errorData = { 
+          error: 'Server error', 
+          message: 'The backend returned an error. Check backend logs for details.',
+          details: errorText.substring(0, 200)
+        };
+      }
+      
       console.log('❌ Proxy: Backend error:', errorData);
       return NextResponse.json(errorData, { status: backendResponse.status });
     }

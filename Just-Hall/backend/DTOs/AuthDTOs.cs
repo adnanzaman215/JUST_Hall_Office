@@ -23,6 +23,8 @@ namespace JustHallAPI.DTOs
         public string Refresh { get; set; } = string.Empty;
         public UserDto User { get; set; } = null!;
         public StudentDto? Student { get; set; }
+        public StaffDto? Staff { get; set; }
+        public AdminDto? Admin { get; set; }
     }
 
     public class UserDto

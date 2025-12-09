@@ -20,6 +20,17 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Check if response has content
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response from backend:', text.substring(0, 200));
+      return NextResponse.json(
+        { error: 'Backend returned non-JSON response', details: text.substring(0, 100) },
+        { status: 500 }
+      );
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
