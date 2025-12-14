@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace JustHallAPI.Models
 {
@@ -59,6 +60,7 @@ namespace JustHallAPI.Models
         public DateTime? LastLogin { get; set; }
 
         // Navigation property
+        [JsonIgnore]
         public virtual Student? Student { get; set; }
     }
 }

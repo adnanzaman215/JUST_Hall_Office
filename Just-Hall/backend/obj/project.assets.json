@@ -3037,23 +3037,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\saiko\\.nuget\\packages\\": {},
+    "C:\\Users\\mdrif\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\saiko\\OneDrive\\Desktop\\JUST_Hall_Office\\Just-Hall\\backend\\JustHallAPI.csproj",
+      "projectUniqueName": "C:\\Users\\mdrif\\OneDrive\\Desktop\\project shoikot\\JUST_Hall_Office\\Just-Hall\\backend\\JustHallAPI.csproj",
       "projectName": "JustHallAPI",
-      "projectPath": "C:\\Users\\saiko\\OneDrive\\Desktop\\JUST_Hall_Office\\Just-Hall\\backend\\JustHallAPI.csproj",
-      "packagesPath": "C:\\Users\\saiko\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\saiko\\OneDrive\\Desktop\\JUST_Hall_Office\\Just-Hall\\backend\\obj\\",
+      "projectPath": "C:\\Users\\mdrif\\OneDrive\\Desktop\\project shoikot\\JUST_Hall_Office\\Just-Hall\\backend\\JustHallAPI.csproj",
+      "packagesPath": "C:\\Users\\mdrif\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\mdrif\\OneDrive\\Desktop\\project shoikot\\JUST_Hall_Office\\Just-Hall\\backend\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\saiko\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\mdrif\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -3080,7 +3080,7 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.200"
+      "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
       "net8.0": {
@@ -3136,7 +3136,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.203/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

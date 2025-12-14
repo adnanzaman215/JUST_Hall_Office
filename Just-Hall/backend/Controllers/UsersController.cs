@@ -64,10 +64,20 @@ namespace JustHallAPI.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // Create student profile if student_id or department provided
+            // Create role-specific profile based on user role
             Student? student = null;
-            if (!string.IsNullOrEmpty(request.StudentId) || !string.IsNullOrEmpty(request.Department))
+            Staff? staff = null;
+            Admin? admin = null;
+
+            if (user.Role.ToLower() == "student" && (!string.IsNullOrEmpty(request.StudentId) || !string.IsNullOrEmpty(request.Department)))
             {
+                // Check if student ID already exists
+                var existingStudent = await _context.Students
+                    .FirstOrDefaultAsync(s => s.StudentId == request.StudentId);
+                
+                if (existingStudent != null)
+                    return BadRequest(new { error = $"Student ID '{request.StudentId}' is already registered." });
+
                 student = new Student
                 {
                     UserId = user.Id,
@@ -77,13 +87,50 @@ namespace JustHallAPI.Controllers
                 _context.Students.Add(student);
                 await _context.SaveChangesAsync();
             }
+            else if (user.Role.ToLower() == "staff" && !string.IsNullOrEmpty(request.StudentId))
+            {
+                // Check if employee ID already exists
+                var existingStaff = await _context.Staff
+                    .FirstOrDefaultAsync(s => s.EmployeeId == request.StudentId);
+                
+                if (existingStaff != null)
+                    return BadRequest(new { error = $"Employee ID '{request.StudentId}' is already registered." });
+
+                staff = new Staff
+                {
+                    UserId = user.Id,
+                    EmployeeId = request.StudentId ?? string.Empty
+                };
+                _context.Staff.Add(staff);
+                await _context.SaveChangesAsync();
+            }
+            else if (user.Role.ToLower() == "admin" && !string.IsNullOrEmpty(request.StudentId))
+            {
+                // Check if admin ID already exists
+                var existingAdmin = await _context.Admins
+                    .FirstOrDefaultAsync(a => a.AdminId == request.StudentId);
+                
+                if (existingAdmin != null)
+                    return BadRequest(new { error = $"Admin ID '{request.StudentId}' is already registered." });
+
+                admin = new Admin
+                {
+                    UserId = user.Id,
+                    AdminId = request.StudentId ?? string.Empty
+                };
+                _context.Admins.Add(admin);
+                await _context.SaveChangesAsync();
+            }
 
             // Generate tokens
             var accessToken = _jwtService.GenerateAccessToken(user);
             var refreshToken = _jwtService.GenerateRefreshToken(user);
 
-            // Prepare student DTO if student profile was created
+            // Prepare role-specific DTO
             StudentDto? studentDto = null;
+            StaffDto? staffDto = null;
+            AdminDto? adminDto = null;
+
             if (student != null)
             {
                 studentDto = new StudentDto
@@ -103,6 +150,37 @@ namespace JustHallAPI.Controllers
                     PhotoUrl = student.PhotoUrl
                 };
             }
+            else if (staff != null)
+            {
+                staffDto = new StaffDto
+                {
+                    EmployeeId = staff.EmployeeId,
+                    Department = staff.Department,
+                    Designation = staff.Designation,
+                    Dob = staff.Dob,
+                    Gender = staff.Gender,
+                    BloodGroup = staff.BloodGroup,
+                    MobileNumber = staff.MobileNumber,
+                    EmergencyNumber = staff.EmergencyNumber,
+                    Address = staff.Address,
+                    Qualification = staff.Qualification,
+                    PhotoUrl = staff.PhotoUrl
+                };
+            }
+            else if (admin != null)
+            {
+                adminDto = new AdminDto
+                {
+                    AdminId = admin.AdminId,
+                    Department = admin.Department,
+                    Designation = admin.Designation,
+                    Dob = admin.Dob,
+                    Gender = admin.Gender,
+                    MobileNumber = admin.MobileNumber,
+                    Address = admin.Address,
+                    PhotoUrl = admin.PhotoUrl
+                };
+            }
 
             return Ok(new AuthResponse
             {
@@ -120,7 +198,9 @@ namespace JustHallAPI.Controllers
                     Department = user.Department,
                     IsVerified = user.IsVerified
                 },
-                Student = studentDto
+                Student = studentDto,
+                Staff = staffDto,
+                Admin = adminDto
             });
         }
 
@@ -206,49 +286,119 @@ namespace JustHallAPI.Controllers
         [Authorize]
         public async Task<ActionResult<ProfileResponse>> GetProfile()
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            var user = await _context.Users
-                .Include(u => u.Student)
-                .FirstOrDefaultAsync(u => u.Id == userId);
-
-            if (user == null)
-                return NotFound(new { error = "User not found" });
-
-            StudentDto? studentDto = null;
-            if (user.Student != null)
+            try
             {
-                studentDto = new StudentDto
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                Console.WriteLine($"🔍 GetProfile - UserId: {userId}");
+                
+                var user = await _context.Users
+                    .Include(u => u.Student)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
                 {
-                    StudentId = user.Student.StudentId,
-                    Department = user.Student.Department,
-                    Session = user.Student.Session,
-                    RoomNo = user.Student.RoomNo,
-                    Dob = user.Student.Dob,
-                    Gender = user.Student.Gender,
-                    BloodGroup = user.Student.BloodGroup,
-                    FatherName = user.Student.FatherName,
-                    MotherName = user.Student.MotherName,
-                    MobileNumber = user.Student.MobileNumber,
-                    EmergencyNumber = user.Student.EmergencyNumber,
-                    Address = user.Student.Address,
-                    PhotoUrl = user.Student.PhotoUrl
+                    Console.WriteLine($"❌ GetProfile - User not found for UserId: {userId}");
+                    return NotFound(new { error = "User not found" });
+                }
+
+                Console.WriteLine($"✅ GetProfile - User found: {user.Email}, Role: {user.Role}");
+
+                StudentDto? studentDto = null;
+                StaffDto? staffDto = null;
+                AdminDto? adminDto = null;
+
+                // Get Student data if role is student
+                if (user.Role.ToLower() == "student" && user.Student != null)
+                {
+                    Console.WriteLine($"📚 GetProfile - Building StudentDto");
+                    studentDto = new StudentDto
+                    {
+                        StudentId = user.Student.StudentId,
+                        Department = user.Student.Department,
+                        Session = user.Student.Session,
+                        RoomNo = user.Student.RoomNo,
+                        Dob = user.Student.Dob,
+                        Gender = user.Student.Gender,
+                        BloodGroup = user.Student.BloodGroup,
+                        FatherName = user.Student.FatherName,
+                        MotherName = user.Student.MotherName,
+                        MobileNumber = user.Student.MobileNumber,
+                        EmergencyNumber = user.Student.EmergencyNumber,
+                        Address = user.Student.Address,
+                        PhotoUrl = user.Student.PhotoUrl
+                    };
+                }
+                // Get Staff data if role is staff
+                else if (user.Role.ToLower() == "staff")
+                {
+                    Console.WriteLine($"👔 GetProfile - Fetching Staff data");
+                    var staff = await _context.Staff.FirstOrDefaultAsync(s => s.UserId == userId);
+                    if (staff != null)
+                    {
+                        staffDto = new StaffDto
+                        {
+                            EmployeeId = staff.EmployeeId,
+                            Department = staff.Department,
+                            Designation = staff.Designation,
+                            Dob = staff.Dob,
+                            Gender = staff.Gender,
+                            BloodGroup = staff.BloodGroup,
+                            MobileNumber = staff.MobileNumber,
+                            EmergencyNumber = staff.EmergencyNumber,
+                            Address = staff.Address,
+                            Qualification = staff.Qualification,
+                            PhotoUrl = staff.PhotoUrl
+                        };
+                        Console.WriteLine($"✅ GetProfile - Staff data loaded");
+                    }
+                }
+                // Get Admin data if role is admin
+                else if (user.Role.ToLower() == "admin")
+                {
+                    Console.WriteLine($"👨‍💼 GetProfile - Fetching Admin data");
+                    var admin = await _context.Admins.FirstOrDefaultAsync(a => a.UserId == userId);
+                    if (admin != null)
+                    {
+                        adminDto = new AdminDto
+                        {
+                            AdminId = admin.AdminId,
+                            Department = admin.Department,
+                            Designation = admin.Designation,
+                            Dob = admin.Dob,
+                            Gender = admin.Gender,
+                            MobileNumber = admin.MobileNumber,
+                            Address = admin.Address,
+                            PhotoUrl = admin.PhotoUrl
+                        };
+                        Console.WriteLine($"✅ GetProfile - Admin data loaded: {admin.AdminId}");
+                    }
+                }
+
+                var response = new ProfileResponse
+                {
+                    User = new UserDto
+                    {
+                        Id = user.Id,
+                        Email = user.Email,
+                        Username = user.Username,
+                        FullName = user.FullName,
+                        Role = user.Role,
+                        IsVerified = user.IsVerified
+                    },
+                    Student = studentDto,
+                    Staff = staffDto,
+                    Admin = adminDto
                 };
-            }
 
-            return Ok(new ProfileResponse
+                Console.WriteLine($"✅ GetProfile - Returning response for role: {user.Role}");
+                return Ok(response);
+            }
+            catch (Exception ex)
             {
-                User = new UserDto
-                {
-                    Id = user.Id,
-                    Email = user.Email,
-                    Username = user.Username,
-                    FullName = user.FullName,
-                    Role = user.Role,
-                    IsVerified = user.IsVerified
-                },
-                Student = studentDto
-            });
+                Console.WriteLine($"❌ GetProfile - Exception: {ex.Message}");
+                Console.WriteLine($"❌ GetProfile - StackTrace: {ex.StackTrace}");
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
         }
 
         // POST: api/users/auth/complete-profile
@@ -266,80 +416,229 @@ namespace JustHallAPI.Controllers
                 return NotFound(new { error = "User not found" });
 
             bool isInitialSetup = !user.IsVerified;
-            Student student;
-
-            if (user.Student != null)
+            
+            // Handle profile creation based on user role
+            if (user.Role.ToLower() == "student")
             {
-                // Update existing profile
-                student = user.Student;
-                if (!string.IsNullOrEmpty(request.StudentId)) student.StudentId = request.StudentId;
-                if (!string.IsNullOrEmpty(request.Department)) student.Department = request.Department;
-                if (!string.IsNullOrEmpty(request.Session)) student.Session = request.Session;
-                if (request.RoomNo.HasValue) student.RoomNo = request.RoomNo.Value;
-                if (request.Dob.HasValue) student.Dob = request.Dob;
-                if (!string.IsNullOrEmpty(request.Gender)) student.Gender = request.Gender;
-                if (!string.IsNullOrEmpty(request.BloodGroup)) student.BloodGroup = request.BloodGroup;
-                if (!string.IsNullOrEmpty(request.FatherName)) student.FatherName = request.FatherName;
-                if (!string.IsNullOrEmpty(request.MotherName)) student.MotherName = request.MotherName;
-                if (!string.IsNullOrEmpty(request.MobileNumber)) student.MobileNumber = request.MobileNumber;
-                if (!string.IsNullOrEmpty(request.EmergencyNumber)) student.EmergencyNumber = request.EmergencyNumber;
-                if (!string.IsNullOrEmpty(request.Address)) student.Address = request.Address;
+                Student student;
 
-                // Handle photo upload if present
-                var photoFile = Request.Form.Files.GetFile("photo");
-                if (photoFile != null && photoFile.Length > 0)
+                if (user.Student != null)
                 {
-                    var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
-                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
-                    Directory.CreateDirectory(uploadsFolder);
-                    var filePath = Path.Combine(uploadsFolder, fileName);
+                    // Update existing profile
+                    student = user.Student;
+                    if (!string.IsNullOrEmpty(request.StudentId)) student.StudentId = request.StudentId;
+                    if (!string.IsNullOrEmpty(request.Department)) student.Department = request.Department;
+                    if (!string.IsNullOrEmpty(request.Session)) student.Session = request.Session;
+                    if (request.RoomNo.HasValue) student.RoomNo = request.RoomNo.Value;
+                    if (request.Dob.HasValue) student.Dob = request.Dob;
+                    if (!string.IsNullOrEmpty(request.Gender)) student.Gender = request.Gender;
+                    if (!string.IsNullOrEmpty(request.BloodGroup)) student.BloodGroup = request.BloodGroup;
+                    if (!string.IsNullOrEmpty(request.FatherName)) student.FatherName = request.FatherName;
+                    if (!string.IsNullOrEmpty(request.MotherName)) student.MotherName = request.MotherName;
+                    if (!string.IsNullOrEmpty(request.MobileNumber)) student.MobileNumber = request.MobileNumber;
+                    if (!string.IsNullOrEmpty(request.EmergencyNumber)) student.EmergencyNumber = request.EmergencyNumber;
+                    if (!string.IsNullOrEmpty(request.Address)) student.Address = request.Address;
 
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    // Handle photo upload if present
+                    var photoFile = Request.Form.Files.GetFile("photo");
+                    if (photoFile != null && photoFile.Length > 0)
                     {
-                        await photoFile.CopyToAsync(stream);
+                        var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
+                        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
+                        Directory.CreateDirectory(uploadsFolder);
+                        var filePath = Path.Combine(uploadsFolder, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(stream);
+                        }
+
+                        student.PhotoUrl = $"profile_photos/{fileName}";
+                    }
+                }
+                else
+                {
+                    // Create new profile
+                    student = new Student
+                    {
+                        UserId = user.Id,
+                        StudentId = request.StudentId,
+                        Department = request.Department,
+                        Session = request.Session,
+                        RoomNo = request.RoomNo ?? 0,
+                        Dob = request.Dob,
+                        Gender = request.Gender,
+                        BloodGroup = request.BloodGroup,
+                        FatherName = request.FatherName,
+                        MotherName = request.MotherName,
+                        MobileNumber = request.MobileNumber,
+                        EmergencyNumber = request.EmergencyNumber,
+                        Address = request.Address
+                    };
+
+                    // Handle photo upload
+                    var photoFile = Request.Form.Files.GetFile("photo");
+                    if (photoFile != null && photoFile.Length > 0)
+                    {
+                        var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
+                        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
+                        Directory.CreateDirectory(uploadsFolder);
+                        var filePath = Path.Combine(uploadsFolder, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(stream);
+                        }
+
+                        student.PhotoUrl = $"profile_photos/{fileName}";
                     }
 
-                    student.PhotoUrl = $"profile_photos/{fileName}";
+                    _context.Students.Add(student);
                 }
             }
-            else
+            else if (user.Role.ToLower() == "staff")
             {
-                // Create new profile
-                student = new Student
+                // Handle staff profile
+                var existingStaff = await _context.Staff.FirstOrDefaultAsync(s => s.UserId == userId);
+                
+                if (existingStaff != null)
                 {
-                    UserId = user.Id,
-                    StudentId = request.StudentId,
-                    Department = request.Department,
-                    Session = request.Session,
-                    RoomNo = request.RoomNo ?? 0,
-                    Dob = request.Dob,
-                    Gender = request.Gender,
-                    BloodGroup = request.BloodGroup,
-                    FatherName = request.FatherName,
-                    MotherName = request.MotherName,
-                    MobileNumber = request.MobileNumber,
-                    EmergencyNumber = request.EmergencyNumber,
-                    Address = request.Address
-                };
-
-                // Handle photo upload
-                var photoFile = Request.Form.Files.GetFile("photo");
-                if (photoFile != null && photoFile.Length > 0)
-                {
-                    var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
-                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
-                    Directory.CreateDirectory(uploadsFolder);
-                    var filePath = Path.Combine(uploadsFolder, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    // Update existing staff profile
+                    if (!string.IsNullOrEmpty(request.StudentId)) existingStaff.EmployeeId = request.StudentId; // Using StudentId field for EmployeeId
+                    if (!string.IsNullOrEmpty(request.Department)) existingStaff.Department = request.Department;
+                    if (!string.IsNullOrEmpty(request.Session)) existingStaff.Designation = request.Session; // Using Session field for Designation
+                    if (request.Dob.HasValue) existingStaff.Dob = request.Dob;
+                    if (!string.IsNullOrEmpty(request.Gender)) existingStaff.Gender = request.Gender;
+                    if (!string.IsNullOrEmpty(request.BloodGroup)) existingStaff.BloodGroup = request.BloodGroup;
+                    if (!string.IsNullOrEmpty(request.MobileNumber)) existingStaff.MobileNumber = request.MobileNumber;
+                    if (!string.IsNullOrEmpty(request.EmergencyNumber)) existingStaff.EmergencyNumber = request.EmergencyNumber;
+                    if (!string.IsNullOrEmpty(request.Address)) existingStaff.Address = request.Address;
+                    if (!string.IsNullOrEmpty(request.FatherName)) existingStaff.Qualification = request.FatherName; // Using FatherName field for Qualification
+                    
+                    // Handle photo upload
+                    var photoFile = Request.Form.Files.GetFile("photo");
+                    if (photoFile != null && photoFile.Length > 0)
                     {
-                        await photoFile.CopyToAsync(stream);
+                        var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
+                        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
+                        Directory.CreateDirectory(uploadsFolder);
+                        var filePath = Path.Combine(uploadsFolder, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(stream);
+                        }
+
+                        existingStaff.PhotoUrl = $"profile_photos/{fileName}";
+                    }
+                }
+                else
+                {
+                    // Create new staff profile
+                    var staff = new Staff
+                    {
+                        UserId = user.Id,
+                        EmployeeId = request.StudentId, // Using StudentId field for EmployeeId
+                        Department = request.Department,
+                        Designation = request.Session, // Using Session field for Designation
+                        JoiningDate = DateTime.UtcNow,
+                        Dob = request.Dob,
+                        Gender = request.Gender,
+                        BloodGroup = request.BloodGroup,
+                        MobileNumber = request.MobileNumber,
+                        EmergencyNumber = request.EmergencyNumber,
+                        Address = request.Address,
+                        Qualification = request.FatherName // Using FatherName field for Qualification
+                    };
+
+                    // Handle photo upload
+                    var photoFile = Request.Form.Files.GetFile("photo");
+                    if (photoFile != null && photoFile.Length > 0)
+                    {
+                        var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
+                        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
+                        Directory.CreateDirectory(uploadsFolder);
+                        var filePath = Path.Combine(uploadsFolder, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(stream);
+                        }
+
+                        staff.PhotoUrl = $"profile_photos/{fileName}";
                     }
 
-                    student.PhotoUrl = $"profile_photos/{fileName}";
+                    _context.Staff.Add(staff);
                 }
+            }
+            else if (user.Role.ToLower() == "admin")
+            {
+                // Handle admin profile
+                var existingAdmin = await _context.Admins.FirstOrDefaultAsync(a => a.UserId == userId);
+                
+                if (existingAdmin != null)
+                {
+                    // Update existing admin profile
+                    if (!string.IsNullOrEmpty(request.StudentId)) existingAdmin.AdminId = request.StudentId; // Using StudentId field for AdminId
+                    if (!string.IsNullOrEmpty(request.Department)) existingAdmin.Department = request.Department;
+                    if (!string.IsNullOrEmpty(request.Session)) existingAdmin.Designation = request.Session; // Using Session field for Designation
+                    if (request.Dob.HasValue) existingAdmin.Dob = request.Dob;
+                    if (!string.IsNullOrEmpty(request.Gender)) existingAdmin.Gender = request.Gender;
+                    if (!string.IsNullOrEmpty(request.MobileNumber)) existingAdmin.MobileNumber = request.MobileNumber;
+                    if (!string.IsNullOrEmpty(request.Address)) existingAdmin.Address = request.Address;
+                    
+                    // Handle photo upload
+                    var photoFile = Request.Form.Files.GetFile("photo");
+                    if (photoFile != null && photoFile.Length > 0)
+                    {
+                        var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
+                        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
+                        Directory.CreateDirectory(uploadsFolder);
+                        var filePath = Path.Combine(uploadsFolder, fileName);
 
-                _context.Students.Add(student);
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(stream);
+                        }
+
+                        existingAdmin.PhotoUrl = $"profile_photos/{fileName}";
+                    }
+                }
+                else
+                {
+                    // Create new admin profile
+                    var admin = new Admin
+                    {
+                        UserId = user.Id,
+                        AdminId = request.StudentId, // Using StudentId field for AdminId
+                        Department = request.Department,
+                        Designation = request.Session, // Using Session field for Designation
+                        JoiningDate = DateTime.UtcNow,
+                        Dob = request.Dob,
+                        Gender = request.Gender,
+                        MobileNumber = request.MobileNumber,
+                        Address = request.Address
+                    };
+
+                    // Handle photo upload
+                    var photoFile = Request.Form.Files.GetFile("photo");
+                    if (photoFile != null && photoFile.Length > 0)
+                    {
+                        var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
+                        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
+                        Directory.CreateDirectory(uploadsFolder);
+                        var filePath = Path.Combine(uploadsFolder, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(stream);
+                        }
+
+                        admin.PhotoUrl = $"profile_photos/{fileName}";
+                    }
+
+                    _context.Admins.Add(admin);
+                }
             }
 
             if (isInitialSetup)
@@ -349,11 +648,15 @@ namespace JustHallAPI.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new CompleteProfileResponse
+            // Prepare response based on role
+            StudentDto? studentDto = null;
+            StaffDto? staffDto = null;
+            AdminDto? adminDto = null;
+
+            if (user.Role.ToLower() == "student" && user.Student != null)
             {
-                Success = true,
-                Message = isInitialSetup ? "Profile completed successfully" : "Profile updated successfully",
-                Student = new StudentDto
+                var student = user.Student;
+                studentDto = new StudentDto
                 {
                     StudentId = student.StudentId,
                     Department = student.Department,
@@ -368,7 +671,55 @@ namespace JustHallAPI.Controllers
                     EmergencyNumber = student.EmergencyNumber,
                     Address = student.Address,
                     PhotoUrl = student.PhotoUrl
+                };
+            }
+            else if (user.Role.ToLower() == "staff")
+            {
+                var staff = await _context.Staff.FirstOrDefaultAsync(s => s.UserId == userId);
+                if (staff != null)
+                {
+                    staffDto = new StaffDto
+                    {
+                        EmployeeId = staff.EmployeeId,
+                        Department = staff.Department,
+                        Designation = staff.Designation,
+                        Dob = staff.Dob,
+                        Gender = staff.Gender,
+                        BloodGroup = staff.BloodGroup,
+                        MobileNumber = staff.MobileNumber,
+                        EmergencyNumber = staff.EmergencyNumber,
+                        Address = staff.Address,
+                        Qualification = staff.Qualification,
+                        PhotoUrl = staff.PhotoUrl
+                    };
                 }
+            }
+            else if (user.Role.ToLower() == "admin")
+            {
+                var admin = await _context.Admins.FirstOrDefaultAsync(a => a.UserId == userId);
+                if (admin != null)
+                {
+                    adminDto = new AdminDto
+                    {
+                        AdminId = admin.AdminId,
+                        Department = admin.Department,
+                        Designation = admin.Designation,
+                        Dob = admin.Dob,
+                        Gender = admin.Gender,
+                        MobileNumber = admin.MobileNumber,
+                        Address = admin.Address,
+                        PhotoUrl = admin.PhotoUrl
+                    };
+                }
+            }
+
+            return Ok(new CompleteProfileResponse
+            {
+                Success = true,
+                Message = isInitialSetup ? "Profile completed successfully" : "Profile updated successfully",
+                Student = studentDto,
+                Staff = staffDto,
+                Admin = adminDto
             });
         }
 

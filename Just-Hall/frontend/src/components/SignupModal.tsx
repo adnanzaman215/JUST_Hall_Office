@@ -16,6 +16,7 @@ export default function SignupModal() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [cpw, setCpw] = useState("");
+  const [role, setRole] = useState("student");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -27,8 +28,34 @@ export default function SignupModal() {
 
     try {
       // Basic validation
-      if (!fullName || !studentId || !department || !email || !pw || !cpw) {
+      if (!fullName || !studentId || !email || !pw || !cpw) {
         setError("All fields are required.");
+        return;
+      }
+
+      // Validate department only for students
+      if (role === "student" && !department) {
+        setError("Department is required for students.");
+        return;
+      }
+
+      // Validate university email format based on role
+      let emailPattern: RegExp;
+      let emailExample: string;
+      
+      if (role === "student") {
+        emailPattern = /^[a-zA-Z0-9._-]+@student\.just\.edu\.bd$/;
+        emailExample = "something@student.just.edu.bd";
+      } else if (role === "staff") {
+        emailPattern = /^[a-zA-Z0-9._-]+@staff\.just\.edu\.bd$/;
+        emailExample = "something@staff.just.edu.bd";
+      } else {
+        emailPattern = /^[a-zA-Z0-9._-]+@teacher\.just\.edu\.bd$/;
+        emailExample = "something@teacher.just.edu.bd";
+      }
+      
+      if (!emailPattern.test(email)) {
+        setError(`Please use your ${role} email address (e.g., ${emailExample})`);
         return;
       }
 
@@ -64,7 +91,7 @@ export default function SignupModal() {
         department,
         email,
         password: pw,
-        role: "student", // Add required role field
+        role: role,
       });
 
       console.log('Registration response received:', response);
@@ -72,33 +99,22 @@ export default function SignupModal() {
       // Store authentication data
       storeToken(response.token);
       
-      // Merge student data into user object with registration info
-      const userWithStudent = {
+      // Merge role-specific data into user object
+      const userWithRoleData = {
         ...response.user,
         full_name: response.user.full_name || fullName,
         student_id: response.user.student_id || studentId,
-        department: response.user.department || department,
-        student: response.student || {
-          student_id: studentId,
-          department: department,
-          session: '',
-          room_no: 0,
-          dob: null,
-          gender: '',
-          blood_group: '',
-          father_name: '',
-          mother_name: '',
-          mobile_number: '',
-          emergency_number: '',
-          address: '',
-          photo_url: null,
-        },
+        department: response.user.department || (role === 'student' ? department : ''),
+        role: role,
+        student: response.student,
+        staff: response.staff,
+        admin: response.admin
       };
       
-      storeUser(userWithStudent);
+      storeUser(userWithRoleData);
 
       console.log("Registration successful:", response);
-      console.log("Stored user data:", userWithStudent);
+      console.log("Stored user data:", userWithRoleData);
 
       // Close modal and redirect to profile completion page
       closeSignup();
@@ -167,7 +183,22 @@ export default function SignupModal() {
             <form onSubmit={onSubmit} className="mt-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700">
-                  Full Name
+                  Role *
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600"
+                  required
+                >
+                  <option value="student">Student</option>
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">
+                  Full Name *
                 </label>
                 <input
                   type="text"
@@ -175,57 +206,63 @@ export default function SignupModal() {
                   onChange={(e) => setFullName(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600"
                   placeholder="e.g., Md. Rahim Uddin"
+                  required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">
-                  Student ID
+                  {role === "student" ? "Student ID *" : role === "staff" ? "Employee ID *" : "Admin ID *"}
                 </label>
                 <input
                   type="text"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600"
-                  placeholder="e.g., 202012345"
+                  placeholder={role === "student" ? "e.g., 202012345" : role === "staff" ? "e.g., EMP-2021-001" : "e.g., ADMIN-001"}
+                  required
                 />
               </div>
+              {role === "student" && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Department *
+                  </label>
+                  <select
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600"
+                    required
+                  >
+                    <option value="">Select Department</option>
+                    <option value="CSE">Computer Science & Engineering</option>
+                    <option value="EEE">Electrical & Electronic Engineering</option>
+                    <option value="ME">Mechanical Engineering</option>
+                    <option value="CE">Civil Engineering</option>
+                    <option value="BBA">Business Administration</option>
+                    <option value="ENG">English</option>
+                    <option value="MATH">Mathematics</option>
+                    <option value="PHY">Physics</option>
+                    <option value="CHEM">Chemistry</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700">
-                  Department
-                </label>
-                <select
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600"
-                >
-                  <option value="">Select Department</option>
-                  <option value="CSE">Computer Science & Engineering</option>
-                  <option value="EEE">Electrical & Electronic Engineering</option>
-                  <option value="ME">Mechanical Engineering</option>
-                  <option value="CE">Civil Engineering</option>
-                  <option value="BBA">Business Administration</option>
-                  <option value="ENG">English</option>
-                  <option value="MATH">Mathematics</option>
-                  <option value="PHY">Physics</option>
-                  <option value="CHEM">Chemistry</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Email
+                  Email *
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600"
-                  placeholder="your.email@university.edu"
+                  placeholder={role === "student" ? "something@student.just.edu.bd" : role === "staff" ? "something@staff.just.edu.bd" : "something@teacher.just.edu.bd"}
+                  required
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
-                    Password
+                    Password *
                   </label>
                   <input
                     type="password"
@@ -233,11 +270,12 @@ export default function SignupModal() {
                     onChange={(e) => setPw(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600"
                     placeholder="••••••••"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
-                    Confirm Password
+                    Confirm Password *
                   </label>
                   <input
                     type="password"
@@ -245,6 +283,7 @@ export default function SignupModal() {
                     onChange={(e) => setCpw(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600"
                     placeholder="••••••••"
+                    required
                   />
                 </div>
               </div>

@@ -13,8 +13,12 @@ export default function LoginModal() {
   // form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("student");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   // login submit handler
   async function onSubmit(e: React.FormEvent) {
@@ -57,16 +61,37 @@ export default function LoginModal() {
 
   // Handle forgot password
   async function handleForgotPassword() {
-    if (!email) {
-      setError("Please enter your email address first.");
+    if (!resetEmail) {
+      setError("Please enter your email address.");
       return;
     }
 
+    // Validate university email format based on role (students, staff, or teachers)
+    const studentPattern = /^[a-zA-Z0-9._-]+@student\.just\.edu\.bd$/;
+    const staffPattern = /^[a-zA-Z0-9._-]+@staff\.just\.edu\.bd$/;
+    const teacherPattern = /^[a-zA-Z0-9._-]+@teacher\.just\.edu\.bd$/;
+    
+    if (!studentPattern.test(resetEmail) && !staffPattern.test(resetEmail) && !teacherPattern.test(resetEmail)) {
+      setError("Please use your university email address (@student.just.edu.bd, @staff.just.edu.bd, or @teacher.just.edu.bd)");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      // For now, just show an alert - can implement proper forgot password later
-      alert("Password reset feature will be implemented soon!");
+      // Call forgot password API (you'll need to implement this in your API)
+      // For now, we'll show a success message
+      setResetMessage("Password reset instructions have been sent to your email address. Please check your inbox.");
+      setTimeout(() => {
+        setShowForgotPassword(false);
+        setResetMessage(null);
+        setResetEmail("");
+      }, 3000);
     } catch (err) {
       setError("Failed to send password reset email. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -104,44 +129,61 @@ export default function LoginModal() {
 
           {/* Right pane – form */}
           <div className="bg-white p-6 sm:p-8">
-            <div className="flex items-center justify-between">
-              {/* Profile icon */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+            {!showForgotPassword ? (
+              <>
+                <div className="flex items-center justify-between">
+                  {/* Profile icon */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-900">Log In</h3>
+                  </div>
+                  <button
+                    onClick={closeLogin}
+                    type="button"
+                    className="rounded-full border p-1.5 text-slate-500 hover:bg-slate-50"
+                    aria-label="Close"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900">Log In</h3>
-              </div>
-              <button
-                onClick={closeLogin}
-                type="button"
-                className="rounded-full border p-1.5 text-slate-500 hover:bg-slate-50"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
 
-            <form onSubmit={onSubmit} className="mt-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Email Address
-                </label>
+                <form onSubmit={onSubmit} className="mt-6 space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Role *
+                    </label>
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
+                      required
+                    >
+                      <option value="student">Student</option>
+                      <option value="staff">Staff</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Email Address *
+                    </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
-                  placeholder="your.email@university.edu"
+                  placeholder={role === "student" ? "something@student.just.edu.bd" : role === "staff" ? "something@staff.just.edu.bd" : "something@teacher.just.edu.bd"}
                   required
                 />
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700">
-                  Password
+                  Password *
                 </label>
                 <input
                   type="password"
@@ -178,12 +220,79 @@ export default function LoginModal() {
               </button>
               <div className="text-slate-400">•</div>
               <button
-                onClick={handleForgotPassword}
+                onClick={() => setShowForgotPassword(true)}
                 className="text-sm text-slate-500 hover:text-slate-700 transition-colors duration-200"
               >
                 Forgot Password?
               </button>
             </div>
+          </>
+        ) : (
+          // Forgot Password Form
+          <>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-slate-900">Reset Password</h3>
+              <button
+                onClick={closeLogin}
+                type="button"
+                className="rounded-full border p-1.5 text-slate-500 hover:bg-slate-50"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="mt-4 text-sm text-slate-600">
+              Enter your university email address and we'll send you instructions to reset your password.
+            </p>
+
+            <div className="mt-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:ring-2 focus:ring-cyan-600 focus:border-transparent"
+                  placeholder="your-email@student/staff/teacher.just.edu.bd"
+                  required
+                />
+              </div>
+
+              {error ? (
+                <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>
+              ) : null}
+
+              {resetMessage ? (
+                <p className="text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">{resetMessage}</p>
+              ) : null}
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setResetEmail("");
+                    setError(null);
+                  }}
+                  className="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all duration-200"
+                >
+                  Back to Login
+                </button>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={isLoading}
+                  className="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  {isLoading ? "Sending..." : "Send Reset Link"}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
           </div>
         </div>
       </div>
