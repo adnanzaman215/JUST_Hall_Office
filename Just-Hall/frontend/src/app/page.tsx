@@ -1,6 +1,6 @@
-"use client";  // Ensure this is a client component
+"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useUI } from "@/context/ui-store";
 import { useSearchParams } from "next/navigation";
@@ -37,11 +37,10 @@ const HomePage = () => {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(false);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const searchParams = useSearchParams();
 
   const { isSignupOpen, isLoginOpen, openLogin } = useUI();
-  
-  console.log("🏠 Home render - Signup:", isSignupOpen, "Login:", isLoginOpen);
 
   // Check for registration completion
   useEffect(() => {
@@ -56,24 +55,39 @@ const HomePage = () => {
   }, [searchParams]);
 
   // Function to handle the next image in carousel
-  const goToNextImage = () => {
+  const goToNextImage = useCallback(() => {
     setCurrentImageIndex((prevIndex) =>
       prevIndex === images.length - 1 ? 0 : prevIndex + 1
     );
-  };
+  }, [images.length]);
 
   // Function to handle the previous image in carousel
-  const goToPrevImage = () => {
+  const goToPrevImage = useCallback(() => {
     setCurrentImageIndex((prevIndex) =>
       prevIndex === 0 ? images.length - 1 : prevIndex - 1
     );
-  };
+  }, [images.length]);
+
+  // Auto-play carousel
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+
+    const interval = setInterval(() => {
+      goToNextImage();
+    }, 5000); // Change image every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, goToNextImage]);
+
+  // Pause auto-play on hover
+  const handleMouseEnter = () => setIsAutoPlaying(false);
+  const handleMouseLeave = () => setIsAutoPlaying(true);
 
   return (
     <main className="home-page" style={{ backgroundColor: "white", minHeight: "100vh" }}>
       {/* Registration Success Message */}
       {showRegistrationSuccess && (
-        <div style={{
+        <div className="animate-slideDown" style={{
           position: 'fixed',
           top: '20px',
           left: '50%',
@@ -81,16 +95,17 @@ const HomePage = () => {
           backgroundColor: '#10B981',
           color: 'white',
           padding: '16px 24px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          borderRadius: '12px',
+          boxShadow: '0 10px 30px rgba(16, 185, 129, 0.3)',
           zIndex: 1000,
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          maxWidth: '500px',
-          width: '90%'
+          maxWidth: '600px',
+          width: '90%',
+          backdropFilter: 'blur(10px)'
         }}>
-          <div style={{ fontSize: '24px' }}>✓</div>
+          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>✓</div>
           <div>
             <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '18px' }}>
               Profile Registration Complete
@@ -106,8 +121,11 @@ const HomePage = () => {
                   textDecoration: 'underline',
                   cursor: 'pointer',
                   fontSize: '15px',
-                  fontWeight: '600'
+                  fontWeight: '600',
+                  transition: 'opacity 0.2s'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
               >
                 sign in here
               </button>
@@ -120,63 +138,177 @@ const HomePage = () => {
               background: 'none',
               border: 'none',
               color: 'white',
-              fontSize: '20px',
+              fontSize: '24px',
               cursor: 'pointer',
-              marginLeft: 'auto'
+              marginLeft: 'auto',
+              transition: 'transform 0.2s'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
             ×
           </button>
         </div>
       )}
 
-      {/* Image Carousel Section */}
-      <section className="carousel-section" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center" }}>
-        <div className="image-carousel" style={{ width: "80%", maxWidth: "1000px", position: "relative" }}>
-          <Image
-            src={images[currentImageIndex]}
-            alt={`Overview Image ${currentImageIndex + 1}`}
-            width={1000}  // Fixed width for the image
-            height={600}  // Fixed height for the image
-            objectFit="cover" // Maintain aspect ratio and cover the area
-            className="carousel-img"
-            style={{ borderRadius: "10px", boxShadow: "0px 0px 15px rgba(0, 0, 0, 0.1)" }}
-          />
-          {/* Carousel Navigation */}
-          <div className="carousel-buttons" style={{ position: "absolute", top: "50%", width: "100%", display: "flex", justifyContent: "space-between" }}>
-            <button className="prev-btn" onClick={goToPrevImage} style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", color: "white", border: "none", padding: "10px", fontSize: "24px", cursor: "pointer" }}>
-              &lt;
-            </button>
-            <button className="next-btn" onClick={goToNextImage} style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", color: "white", border: "none", padding: "10px", fontSize: "24px", cursor: "pointer" }}>
-              &gt;
-            </button>
+      {/* Hero Section with Carousel */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 to-white py-12 md:py-20">
+        <div className="container mx-auto px-4">
+          {/* Image Carousel */}
+          <div 
+            className="relative mx-auto max-w-6xl mb-16"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl">
+              <Image
+                src={images[currentImageIndex]}
+                alt={`Overview Image ${currentImageIndex + 1}`}
+                fill
+                priority
+                className="object-cover transition-opacity duration-700"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+              />
+              
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+              
+              {/* Navigation Buttons */}
+              <div className="absolute inset-0 flex items-center justify-between px-4">
+                <button 
+                  onClick={goToPrevImage}
+                  className="group bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 hover:scale-110"
+                  aria-label="Previous image"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button 
+                  onClick={goToNextImage}
+                  className="group bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 hover:scale-110"
+                  aria-label="Next image"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  </button>
+              </div>
+
+              {/* Carousel Indicators */}
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
+                {images.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === currentImageIndex 
+                        ? 'w-8 bg-white' 
+                        : 'w-2 bg-white/50 hover:bg-white/75'
+                    }`}
+                    aria-label={`Go to image ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="overview" style={{ paddingTop: "20px", textAlign: "center", width: "80%", maxWidth: "1000px", color: "#333" }}>
-          <h2 style={{ fontSize: "2.5em", fontWeight: "bold", marginBottom: "10px" }}>Overview</h2>
-          <p style={{ fontSize: "1.2em", color: "#333" }}>
-            Munshi Meherullah Hall is a male student dormitory at the University
-            of Science and Technology (JUST), named after Munshi Mohammad
-            Meherullah. This facility provides a safe and conducive environment
-            for students to live and study.
-          </p>
+
+          {/* Overview Section */}
+          <div className="text-center max-w-4xl mx-auto">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-900 mb-6 leading-tight">
+              Welcome<br/> 
+              to<br/> 
+              Munshi Meherullah Hall
+            </h1>
+            <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-700 mx-auto mb-8 rounded-full" />
+            <p className="text-lg md:text-xl text-slate-700 leading-relaxed">
+              Munshi Meherullah Hall is a premier male student dormitory at the Jashore University
+              of Science and Technology (JUST), named after the distinguished scholar Munshi Mohammad
+              Meherullah. Our facility provides a safe, modern, and conducive environment
+              for students to live, learn, and thrive in their academic journey.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* Other sections (can be added similarly) */}
       {/* Hall Portal Section */}
-      <section className="hall-portal" style={{ padding: "40px 20px", textAlign: "left", color: "#333", backgroundColor: "#f9f9f9" }}>
-        <h2 style={{ fontSize: "2.5em", fontWeight: "bold", marginBottom: "20px" }}>Hall Portal</h2>
-        <div className="portal-cards" style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap" }}>
-          {hallPortalData.map((card) => (
-            <Hall_PortalCard
-              key={card.name}
-              name={card.name}
-              icon={card.icon}
-              blurb={card.blurb}
-              details={card.details}
-            />
-          ))}
+      <section className="py-16 md:py-24 bg-gradient-to-b from-white to-slate-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-900 mb-4">
+              Hall Management Portal
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Access comprehensive services and manage your hall experience seamlessly
+            </p>
+            <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-700 mx-auto mt-6 rounded-full" />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {hallPortalData.map((card, index) => (
+              <div 
+                key={card.name}
+                className="transform transition-all duration-300 hover:scale-105"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <Hall_PortalCard
+                  name={card.name}
+                  icon={card.icon}
+                  blurb={card.blurb}
+                  details={card.details}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 md:py-24 bg-gradient-to-b from-slate-50 to-blue-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
+              Why Choose Our Hall?
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Experience excellence in student accommodation with our comprehensive facilities
+            </p>
+            <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-700 mx-auto mt-6 rounded-full" />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-slate-100">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl mb-6">
+                <div className="text-4xl">🏠</div>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Modern Facilities</h3>
+              <p className="text-slate-600 leading-relaxed">State-of-the-art amenities for comfortable living</p>
+            </div>
+            
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-slate-100">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl mb-6">
+                <div className="text-4xl">🔒</div>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">24/7 Security</h3>
+              <p className="text-slate-600 leading-relaxed">Round-the-clock security for peace of mind</p>
+            </div>
+            
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-slate-100">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl mb-6">
+                <div className="text-4xl">🍽️</div>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Dining Services</h3>
+              <p className="text-slate-600 leading-relaxed">Nutritious meals and flexible dining options</p>
+            </div>
+            
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-slate-100">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl mb-6">
+                <div className="text-4xl">📚</div>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Study Spaces</h3>
+              <p className="text-slate-600 leading-relaxed">Quiet areas designed for academic success</p>
+            </div>
+          </div>
         </div>
       </section>
     </main>

@@ -16,6 +16,8 @@ export default function ApplySeatPage() {
   const [paymentSlipNo, setPaymentSlipNo] = useState("");
   const [paymentSlipFile, setPaymentSlipFile] = useState<File | null>(null);
   const [paymentSlipPreview, setPaymentSlipPreview] = useState<string | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
@@ -29,7 +31,7 @@ export default function ApplySeatPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Handle file selection
+  // Handle payment slip file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -41,9 +43,9 @@ export default function ApplySeatPage() {
       return;
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
+    // Validate file size (1MB max)
+    if (file.size > 1 * 1024 * 1024) {
+      setError('File size must be less than 1MB');
       return;
     }
 
@@ -62,6 +64,35 @@ export default function ApplySeatPage() {
     }
   };
 
+  // Handle profile photo selection
+  const handleProfilePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type (only images)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please select a valid image file (JPG or PNG)');
+      return;
+    }
+
+    // Validate file size (1MB max for profile photos)
+    if (file.size > 1 * 1024 * 1024) {
+      setError('Profile photo must be less than 1MB');
+      return;
+    }
+
+    setProfilePhoto(file);
+    setError(null);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setProfilePhotoPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Handle form submission
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +106,11 @@ export default function ApplySeatPage() {
 
     if (!paymentSlipFile) {
       setError("⚠️ Please upload a payment slip image.");
+      return;
+    }
+
+    if (!profilePhoto) {
+      setError("⚠️ Please upload your profile photo for verification.");
       return;
     }
 
@@ -137,18 +173,87 @@ export default function ApplySeatPage() {
   }
 
   return (
-    <main className="max-w-5xl mx-auto px-5 py-10">
-      <section className="bg-gradient-to-r from-sky-700 via-cyan-700 to-teal-700 rounded-2xl p-8 text-white shadow-lg mb-8">
-        <h1 className="text-3xl font-extrabold">Hall Seat Application Form</h1>
-        <p className="mt-2 text-sky-100">
-          Please complete all sections of the form carefully. All fields marked with * are required.
-        </p>
-      </section>
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-slate-50 py-12">
+      <div className="max-w-5xl mx-auto px-5">
+        <section className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+            Hall Seat Application Form
+          </h1>
+          <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-700 mx-auto mb-6 rounded-full" />
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Please complete all sections of the form carefully. All fields marked with <span className="text-red-500 font-semibold">*</span> are required.
+          </p>
+          <div className="mt-6 inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-6 py-3 rounded-full text-sm font-medium">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            No login required - Open to all students
+          </div>
+        </section>
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-2xl shadow-md space-y-8"
-      >
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white p-8 md:p-10 rounded-2xl shadow-xl border border-slate-200 space-y-8"
+        >
+        {/* Profile Photo Section - Top Right */}
+        <div className="flex justify-between items-start mb-6 pb-6 border-b border-slate-200">
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Application Form</h3>
+            <p className="text-sm text-slate-600">Complete all sections to submit your hall seat application</p>
+          </div>
+          <div className="flex-shrink-0 ml-6">
+            <label className="cursor-pointer group">
+              <div className="relative">
+                {profilePhotoPreview ? (
+                  <div className="relative">
+                    <img 
+                      src={profilePhotoPreview} 
+                      alt="Profile photo" 
+                      className="w-32 h-32 object-cover rounded-full border-4 border-blue-200 shadow-lg group-hover:border-blue-400 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setProfilePhoto(null);
+                        setProfilePhotoPreview(null);
+                      }}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow-md"
+                      title="Remove photo"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
+                      <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-full border-4 border-dashed border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col items-center justify-center group-hover:border-blue-500 group-hover:bg-blue-100 transition-all">
+                    <svg className="w-10 h-10 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-xs text-blue-600 font-semibold">Upload Photo</span>
+                  </div>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png"
+                onChange={handleProfilePhotoSelect}
+                className="hidden"
+                required
+              />
+            </label>
+            <p className="text-xs text-center text-gray-500 mt-2">Profile Photo <span className="text-red-500">*</span></p>
+            <p className="text-xs text-center text-gray-400">Max 1MB</p>
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded">
             <div className="flex items-center">
@@ -171,9 +276,9 @@ export default function ApplySeatPage() {
         )}
 
         {/* Personal Information Section */}
-        <div className="border-b pb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <span className="bg-cyan-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">1</span>
+        <div className="border-b border-slate-200 pb-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center">
+            <span className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center mr-3 text-sm shadow-md">1</span>
             Personal Information
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
@@ -185,7 +290,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter your full name"
                 required
               />
@@ -198,7 +303,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. 210101"
                 required
               />
@@ -211,7 +316,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. Computer Science"
                 required
               />
@@ -224,7 +329,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={session}
                 onChange={(e) => setSession(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. 2021-2025"
                 required
               />
@@ -237,7 +342,7 @@ export default function ApplySeatPage() {
                 type="date"
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 required
               />
             </div>
@@ -248,7 +353,7 @@ export default function ApplySeatPage() {
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 required
               >
                 <option value="">Select Gender</option>
@@ -261,9 +366,9 @@ export default function ApplySeatPage() {
         </div>
 
         {/* Contact Information Section */}
-        <div className="border-b pb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <span className="bg-cyan-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">2</span>
+        <div className="border-b border-slate-200 pb-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center">
+            <span className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center mr-3 text-sm shadow-md">2</span>
             Contact Information
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
@@ -275,7 +380,7 @@ export default function ApplySeatPage() {
                 type="tel"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. 01712345678"
                 required
               />
@@ -288,7 +393,7 @@ export default function ApplySeatPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="your.email@example.com"
                 required
               />
@@ -301,7 +406,7 @@ export default function ApplySeatPage() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 rows={3}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter your complete permanent address"
                 required
               />
@@ -310,9 +415,9 @@ export default function ApplySeatPage() {
         </div>
 
         {/* Family Information Section */}
-        <div className="border-b pb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <span className="bg-cyan-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">3</span>
+        <div className="border-b border-slate-200 pb-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center">
+            <span className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center mr-3 text-sm shadow-md">3</span>
             Family Information
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
@@ -324,7 +429,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={fatherName}
                 onChange={(e) => setFatherName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter father's name"
                 required
               />
@@ -337,7 +442,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={fatherOccupation}
                 onChange={(e) => setFatherOccupation(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. Teacher, Business, etc."
               />
             </div>
@@ -349,7 +454,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={motherName}
                 onChange={(e) => setMotherName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter mother's name"
                 required
               />
@@ -362,7 +467,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={motherOccupation}
                 onChange={(e) => setMotherOccupation(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. Housewife, Doctor, etc."
               />
             </div>
@@ -374,7 +479,7 @@ export default function ApplySeatPage() {
                 type="number"
                 value={householdIncome}
                 onChange={(e) => setHouseholdIncome(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter annual household income in BDT"
                 min="0"
                 step="1000"
@@ -384,9 +489,9 @@ export default function ApplySeatPage() {
         </div>
 
         {/* Payment Information Section */}
-        <div className="border-b pb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <span className="bg-cyan-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">4</span>
+        <div className="border-b border-slate-200 pb-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center">
+            <span className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center mr-3 text-sm shadow-md">4</span>
             Payment Information
           </h2>
           <div className="space-y-6">
@@ -398,7 +503,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={paymentSlipNo}
                 onChange={(e) => setPaymentSlipNo(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter payment slip number"
                 required
               />
@@ -409,20 +514,20 @@ export default function ApplySeatPage() {
                 Upload Payment Slip <span className="text-red-500">*</span>
               </label>
               <div className="mt-2">
-                <label className="flex flex-col items-center px-6 py-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-dashed border-gray-300 cursor-pointer hover:border-cyan-500 hover:bg-cyan-50 transition-all duration-200">
+                <label className="flex flex-col items-center px-6 py-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-dashed border-gray-300 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
                   <div className="flex flex-col items-center space-y-3">
                     <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                     {paymentSlipFile ? (
                       <div className="text-center">
-                        <p className="text-sm font-semibold text-cyan-600">{paymentSlipFile.name}</p>
+                        <p className="text-sm font-semibold text-blue-600">{paymentSlipFile.name}</p>
                         <p className="text-xs text-gray-500 mt-1">Click to change file</p>
                       </div>
                     ) : (
                       <div className="text-center">
                         <p className="text-sm font-semibold text-gray-700">Click to upload payment slip</p>
-                        <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (max 5MB)</p>
+                        <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (max 1MB)</p>
                       </div>
                     )}
                   </div>
@@ -476,7 +581,7 @@ export default function ApplySeatPage() {
           <button
             type="submit"
             disabled={loading}
-            className="px-8 py-3 text-sm font-bold text-white bg-gradient-to-r from-cyan-600 to-teal-600 rounded-lg hover:from-cyan-700 hover:to-teal-700 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-8 py-3 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? (
               <>
@@ -496,7 +601,8 @@ export default function ApplySeatPage() {
             )}
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </main>
   );
 }
