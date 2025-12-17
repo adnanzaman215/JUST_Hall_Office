@@ -71,50 +71,53 @@ export default function HallPortal() {
 
   if (!ready) {
     return (
-      <main className="max-w-7xl mx-auto px-5 py-10">
-        <section className="mb-6">
-          <div className="rounded-3xl px-6 md:px-10 py-6 md:py-8 bg-gradient-to-r from-[#0f2027] via-[#0f5e73] to-[#0b7872] text-white shadow-lg">
-            <div className="flex items-start gap-4">
-              <div className="text-3xl md:text-4xl leading-none">📢</div>
-              <div>
-                <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">Hall Portal</h1>
-                <p className="text-white/85 mt-1 md:mt-2">Loading your access…</p>
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+        <div className="max-w-7xl mx-auto px-5 py-12">
+          <section className="mb-8">
+            <div className="rounded-3xl px-6 md:px-10 py-8 md:py-10 bg-gradient-to-r from-[#0f2027] via-[#0f5e73] to-[#0b7872] text-white shadow-2xl">
+              <div className="flex items-start gap-4">
+                <div className="text-4xl md:text-5xl leading-none">📢</div>
+                <div>
+                  <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">Hall Portal</h1>
+                  <p className="text-white/90 mt-2 md:mt-3 text-lg">Loading your access…</p>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-5 py-10">
-      {/* Hero Section */}
-      <section className="mb-6">
-        <div className="rounded-3xl px-6 md:px-10 py-6 md:py-8 bg-gradient-to-r from-[#0f2027] via-[#0f5e73] to-[#0b7872] text-white shadow-lg">
-          <div className="flex items-start gap-4">
-            <div className="text-3xl md:text-4xl leading-none">📢</div>
-            <div>
-              <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">Hall Portal</h1>
-              <p className="text-white/85 mt-1 md:mt-2">
-                Students can apply for a seat. Admins can manage applications.
-              </p>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+      <div className="max-w-7xl mx-auto px-5 py-12">
+        {/* Hero Section */}
+        <section className="mb-8">
+          <div className="rounded-3xl px-6 md:px-10 py-8 md:py-10 bg-gradient-to-r from-[#0f2027] via-[#0f5e73] to-[#0b7872] text-white shadow-2xl">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl md:text-5xl leading-none">📢</div>
+              <div>
+                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">Hall Portal</h1>
+                <p className="text-white/90 mt-2 md:mt-3 text-lg">
+                  Students can apply for a seat. Admins can manage applications.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Cards Section */}
-      <section
-        aria-label="Hall Portal Sections"
-        className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-      >
+        {/* Cards Section */}
+        <section
+          aria-label="Hall Portal Sections"
+          className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+        >
         {/* Show only to normal users */}
         {!isSuperUser && (
           <HallCard
             key="apply-seat"
             section="Apply for Seat"
-            description="Students can apply for a seat in the hall."
+            description="Submit your application to secure a seat in the hall."
           >
             <ApplySeatButton />
           </HallCard>
@@ -137,7 +140,8 @@ export default function HallPortal() {
             />
           </>
         )}
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

@@ -67,6 +67,7 @@ export default function ApplySeatPage() {
   // Handle profile photo selection
   const handleProfilePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    console.log('File selected:', file);
     if (!file) return;
 
     // Validate file type (only images)
@@ -82,13 +83,20 @@ export default function ApplySeatPage() {
       return;
     }
 
+    console.log('Setting profile photo...');
     setProfilePhoto(file);
     setError(null);
     
     // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
-      setProfilePhotoPreview(e.target?.result as string);
+      const result = e.target?.result as string;
+      console.log('Preview generated, length:', result?.length);
+      setProfilePhotoPreview(result);
+    };
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      setError('Failed to load image preview');
     };
     reader.readAsDataURL(file);
   };
@@ -101,6 +109,13 @@ export default function ApplySeatPage() {
 
     if (!fullName || !studentId || !department || !session || !dob || !gender || !paymentSlipNo || !mobile || !email || !address || !fatherName || !motherName) {
       setError("⚠️ Please fill in all required fields.");
+      return;
+    }
+
+    // Validate email format
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@student\.just\.edu\.bd$/;
+    if (!emailPattern.test(email)) {
+      setError("⚠️ Email must be in the format: yourname@student.just.edu.bd");
       return;
     }
 
@@ -205,12 +220,19 @@ export default function ApplySeatPage() {
             <label className="cursor-pointer group">
               <div className="relative">
                 {profilePhotoPreview ? (
-                  <div className="relative">
+                  <div className="relative w-32 h-32">
                     <img 
                       src={profilePhotoPreview} 
                       alt="Profile photo" 
-                      className="w-32 h-32 object-cover rounded-full border-4 border-blue-200 shadow-lg group-hover:border-blue-400 transition-all"
+                      className="w-32 h-32 object-cover rounded-full border-4 border-green-400 shadow-lg bg-white"
+                      style={{ display: 'block' }}
                     />
+                    {/* Success checkmark */}
+                    <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1.5 shadow-md z-20">
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -218,19 +240,13 @@ export default function ApplySeatPage() {
                         setProfilePhoto(null);
                         setProfilePhotoPreview(null);
                       }}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow-md"
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow-md z-20"
                       title="Remove photo"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
-                    <div className="absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
-                      <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </div>
                   </div>
                 ) : (
                   <div className="w-32 h-32 rounded-full border-4 border-dashed border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col items-center justify-center group-hover:border-blue-500 group-hover:bg-blue-100 transition-all">
@@ -249,8 +265,22 @@ export default function ApplySeatPage() {
                 required
               />
             </label>
-            <p className="text-xs text-center text-gray-500 mt-2">Profile Photo <span className="text-red-500">*</span></p>
-            <p className="text-xs text-center text-gray-400">Max 1MB</p>
+            {profilePhoto ? (
+              <div className="mt-2 text-center">
+                <p className="text-xs font-semibold text-green-600 flex items-center justify-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Photo uploaded
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[128px]">{profilePhoto.name}</p>
+              </div>
+            ) : (
+              <div className="mt-2 text-center">
+                <p className="text-xs text-gray-500">Profile Photo <span className="text-red-500">*</span></p>
+                <p className="text-xs text-gray-400">Max 1MB</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -393,8 +423,10 @@ export default function ApplySeatPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                pattern="[a-zA-Z0-9._%+-]+@student\.just\.edu\.bd"
                 className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="your.email@example.com"
+                placeholder="something@student.just.edu.bd"
+                title="Email must be in the format: yourname@student.just.edu.bd"
                 required
               />
             </div>
