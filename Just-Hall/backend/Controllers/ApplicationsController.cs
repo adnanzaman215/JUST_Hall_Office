@@ -18,6 +18,47 @@ namespace JustHallAPI.Controllers
             _context = context;
         }
 
+        // GET: api/applications/debug/count
+        [HttpGet("debug/count")]
+        [AllowAnonymous]
+        public async Task<ActionResult> GetApplicationCount()
+        {
+            var count = await _context.Applications.CountAsync();
+            var allStudentIds = await _context.Applications.Select(a => a.StudentId).ToListAsync();
+            
+            return Ok(new { 
+                totalApplications = count,
+                studentIds = allStudentIds,
+                message = $"Found {count} applications in database"
+            });
+        }
+
+        // DELETE: api/applications/debug/delete-empty
+        [HttpDelete("debug/delete-empty")]
+        [AllowAnonymous]
+        public async Task<ActionResult> DeleteEmptyRecords()
+        {
+            var emptyRecords = await _context.Applications
+                .Where(a => string.IsNullOrEmpty(a.StudentId))
+                .ToListAsync();
+            
+            if (emptyRecords.Any())
+            {
+                _context.Applications.RemoveRange(emptyRecords);
+                await _context.SaveChangesAsync();
+                
+                return Ok(new { 
+                    message = $"Deleted {emptyRecords.Count} records with empty student IDs",
+                    deletedCount = emptyRecords.Count
+                });
+            }
+            
+            return Ok(new { 
+                message = "No empty records found",
+                deletedCount = 0
+            });
+        }
+
         // GET: api/applications
         [HttpGet]
         [AllowAnonymous]
@@ -58,8 +99,29 @@ namespace JustHallAPI.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ApplicationDto>> CreateApplication([FromBody] CreateApplicationRequest request)
         {
+            // Log incoming request for debugging
+            Console.WriteLine($"Received application request for Student ID: '{request.StudentId}'");
+            
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(request.StudentId))
+                return BadRequest(new { error = "Student ID is required and cannot be empty" });
+                
+            if (string.IsNullOrWhiteSpace(request.FullName))
+                return BadRequest(new { error = "Full name is required and cannot be empty" });
+            
+            // Check for existing student IDs (excluding empty/null values)
+            var existingWithStudentId = await _context.Applications
+                .Where(a => !string.IsNullOrEmpty(a.StudentId) && a.StudentId == request.StudentId)
+                .ToListAsync();
+            
+            Console.WriteLine($"Found {existingWithStudentId.Count} existing records with Student ID: '{request.StudentId}'");
+            foreach (var app in existingWithStudentId)
+            {
+                Console.WriteLine($"  - ID: {app.Id}, Name: {app.FullName}, Created: {app.CreatedAt}");
+            }
+            
             // Validate unique constraints
-            if (await _context.Applications.AnyAsync(a => a.StudentId == request.StudentId))
+            if (existingWithStudentId.Any())
                 return BadRequest(new { error = "An application with this student ID already exists" });
 
             if (await _context.Applications.AnyAsync(a => a.PaymentSlipNo == request.PaymentSlipNo))
@@ -83,6 +145,9 @@ namespace JustHallAPI.Controllers
                 HouseholdIncome = request.HouseholdIncome,
                 PaymentSlipNo = request.PaymentSlipNo,
                 PaymentSlipUrl = request.PaymentSlipUrl,
+                ProfilePhotoUrl = request.ProfilePhotoUrl,
+                UserId = request.UserId,
+                Password = request.Password, // Note: Should be hashed in production!
                 Status = "Pending",
                 CreatedAt = DateTime.UtcNow
             };

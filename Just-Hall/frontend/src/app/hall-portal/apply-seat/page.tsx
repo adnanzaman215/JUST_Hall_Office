@@ -26,6 +26,8 @@ export default function ApplySeatPage() {
   const [fatherOccupation, setFatherOccupation] = useState("");
   const [motherOccupation, setMotherOccupation] = useState("");
   const [householdIncome, setHouseholdIncome] = useState("");
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,8 +109,20 @@ export default function ApplySeatPage() {
     setError(null);
     setSuccess(null);
 
-    if (!fullName || !studentId || !department || !session || !dob || !gender || !paymentSlipNo || !mobile || !email || !address || !fatherName || !motherName) {
+    if (!fullName || !studentId || !department || !session || !dob || !gender || !paymentSlipNo || !mobile || !email || !address || !fatherName || !motherName || !userId || !password) {
       setError("⚠️ Please fill in all required fields.");
+      return;
+    }
+
+    // Validate userId (alphanumeric, 4-20 characters)
+    if (userId.length < 4 || userId.length > 20 || !/^[a-zA-Z0-9_]+$/.test(userId)) {
+      setError("⚠️ User ID must be 4-20 characters long and contain only letters, numbers, and underscores.");
+      return;
+    }
+
+    // Validate password (minimum 6 characters)
+    if (password.length < 6) {
+      setError("⚠️ Password must be at least 6 characters long.");
       return;
     }
 
@@ -132,6 +146,11 @@ export default function ApplySeatPage() {
     try {
       setLoading(true);
 
+      console.log('========== FORM SUBMISSION DEBUG ==========');
+      console.log('Student ID being submitted:', studentId);
+      console.log('Full Name:', fullName);
+      console.log('Email:', email);
+
       // First, upload the payment slip file
       const formData = new FormData();
       formData.append('payment_slip', paymentSlipFile);
@@ -149,37 +168,64 @@ export default function ApplySeatPage() {
       const uploadData = await uploadRes.json();
       const paymentSlipUrl = uploadData.paymentSlipUrl;
 
-      // Then, create the application with the uploaded file URL
+      // Upload profile photo
+      const profileFormData = new FormData();
+      profileFormData.append('profile_photo', profilePhoto);
+
+      const profileUploadRes = await fetch('/api/upload-application-photo', {
+        method: 'POST',
+        body: profileFormData,
+      });
+
+      if (!profileUploadRes.ok) {
+        const errorData = await profileUploadRes.json();
+        throw new Error(errorData.error || 'Failed to upload profile photo');
+      }
+
+      const profileUploadData = await profileUploadRes.json();
+      const profilePhotoUrl = profileUploadData.profilePhotoUrl;
+
+      // Then, create the application with the uploaded file URLs
+      const requestBody = {
+        FullName: fullName,
+        StudentId: studentId,
+        Department: department,
+        Session: session,
+        Dob: dob,
+        Gender: gender,
+        PaymentSlipNo: paymentSlipNo,
+        PaymentSlipUrl: paymentSlipUrl,
+        ProfilePhotoUrl: profilePhotoUrl,
+        Mobile: mobile,
+        Email: email,
+        Address: address,
+        FatherName: fatherName,
+        MotherName: motherName,
+        FatherOccupation: fatherOccupation || null,
+        MotherOccupation: motherOccupation || null,
+        HouseholdIncome: householdIncome ? parseFloat(householdIncome) : null,
+        UserId: userId,
+        Password: password,
+      };
+      
+      console.log('Sending request body:', JSON.stringify(requestBody, null, 2));
+      
       const res = await fetch("http://localhost:8000/api/applications/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: fullName,
-          student_id: studentId,
-          department,
-          session,
-          dob,
-          gender,
-          payment_slip_no: paymentSlipNo,
-          payment_slip_url: paymentSlipUrl,
-          mobile,
-          email,
-          address,
-          father_name: fatherName,
-          mother_name: motherName,
-          father_occupation: fatherOccupation || null,
-          mother_occupation: motherOccupation || null,
-          household_income: householdIncome ? parseFloat(householdIncome) : null,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('Response status:', res.status);
+      
       if (!res.ok) {
         const errorData = await res.json();
+        console.log('Error response:', errorData);
         throw new Error(errorData.error || "Failed to submit application");
       }
       
-      setSuccess("✅ Application submitted successfully!");
-      setTimeout(() => router.push("/hall-portal"), 2000);
+      setSuccess("✅ Application submitted successfully! Your tracking credentials have been sent to your email.");
+      setTimeout(() => router.push("/hall-portal"), 3000);
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -210,77 +256,118 @@ export default function ApplySeatPage() {
           onSubmit={handleSubmit}
           className="bg-white p-8 md:p-10 rounded-2xl shadow-xl border border-slate-200 space-y-8"
         >
-        {/* Profile Photo Section - Top Right */}
-        <div className="flex justify-between items-start mb-6 pb-6 border-b border-slate-200">
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Application Form</h3>
-            <p className="text-sm text-slate-600">Complete all sections to submit your hall seat application</p>
-          </div>
-          <div className="flex-shrink-0 ml-6">
-            <label className="cursor-pointer group">
-              <div className="relative">
-                {profilePhotoPreview ? (
-                  <div className="relative w-32 h-32">
-                    <img 
-                      src={profilePhotoPreview} 
-                      alt="Profile photo" 
-                      className="w-32 h-32 object-cover rounded-full border-4 border-green-400 shadow-lg bg-white"
-                      style={{ display: 'block' }}
-                    />
-                    {/* Success checkmark */}
-                    <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1.5 shadow-md z-20">
-                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
+        {/* Header with Tracking Credentials and Profile Photo */}
+        <div className="mb-6 pb-6 border-b border-slate-200">
+          <div className="flex justify-between items-start gap-8">
+            {/* Left: Tracking Credentials */}
+            <div className="flex-1 max-w-md">
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Application Tracking Credentials</h3>
+              <p className="text-sm text-slate-600 mb-4">Create credentials to track your application status later. These will be sent to your email.</p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    UserName <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    className="block w-full max-w-xs rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                    placeholder="Choose a username (4-20 characters)"
+                    minLength={4}
+                    maxLength={20}
+                    pattern="[a-zA-Z0-9_]+"
+                    title="UserName must contain only letters, numbers, and underscores"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Use letters, numbers, and underscores only</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="block w-full max-w-xs rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                    placeholder="Create a password (min 6 characters)"
+                    minLength={6}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Profile Photo */}
+            <div className="flex-shrink-0">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 text-center">Profile Photo</h3>
+              <label className="cursor-pointer group">
+                <div className="relative">
+                  {profilePhotoPreview ? (
+                    <div className="relative w-32 h-32">
+                      <img 
+                        src={profilePhotoPreview} 
+                        alt="Profile photo" 
+                        className="w-32 h-32 object-cover rounded-full border-4 border-green-400 shadow-lg bg-white"
+                        style={{ display: 'block' }}
+                      />
+                      {/* Success checkmark */}
+                      <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1.5 shadow-md z-20">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setProfilePhoto(null);
+                          setProfilePhotoPreview(null);
+                        }}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow-md z-20"
+                        title="Remove photo"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setProfilePhoto(null);
-                        setProfilePhotoPreview(null);
-                      }}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow-md z-20"
-                      title="Remove photo"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full border-4 border-dashed border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col items-center justify-center group-hover:border-blue-500 group-hover:bg-blue-100 transition-all">
+                      <svg className="w-10 h-10 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 rounded-full border-4 border-dashed border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col items-center justify-center group-hover:border-blue-500 group-hover:bg-blue-100 transition-all">
-                    <svg className="w-10 h-10 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <span className="text-xs text-blue-600 font-semibold">Upload Photo</span>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  onChange={handleProfilePhotoSelect}
+                  className="hidden"
+                  required
+                />
+              </label>
+              {profilePhoto ? (
+                <div className="mt-2 text-center">
+                  <p className="text-xs font-semibold text-green-600 flex items-center justify-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-xs text-blue-600 font-semibold">Upload Photo</span>
-                  </div>
-                )}
-              </div>
-              <input
-                type="file"
-                accept="image/jpeg,image/jpg,image/png"
-                onChange={handleProfilePhotoSelect}
-                className="hidden"
-                required
-              />
-            </label>
-            {profilePhoto ? (
-              <div className="mt-2 text-center">
-                <p className="text-xs font-semibold text-green-600 flex items-center justify-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Photo uploaded
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[128px]">{profilePhoto.name}</p>
-              </div>
-            ) : (
-              <div className="mt-2 text-center">
-                <p className="text-xs text-gray-500">Profile Photo <span className="text-red-500">*</span></p>
-                <p className="text-xs text-gray-400">Max 1MB</p>
-              </div>
-            )}
+                    Photo uploaded
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[128px]">{profilePhoto.name}</p>
+                </div>
+              ) : (
+                <div className="mt-2 text-center">
+                  <p className="text-xs text-gray-500">Required <span className="text-red-500">*</span></p>
+                  <p className="text-xs text-gray-400">Max 1MB</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

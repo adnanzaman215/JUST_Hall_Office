@@ -83,6 +83,18 @@ namespace JustHallAPI.Models
         [Column("payment_slip_url")]
         public string? PaymentSlipUrl { get; set; }
 
+        [MaxLength(255)]
+        [Column("profile_photo_url")]
+        public string? ProfilePhotoUrl { get; set; }
+
+        [MaxLength(100)]
+        [Column("user_id")]
+        public string? UserId { get; set; }
+
+        [MaxLength(255)]
+        [Column("password")]
+        public string? Password { get; set; }
+
         [Required]
         [MaxLength(20)]
         [Column("status")]
