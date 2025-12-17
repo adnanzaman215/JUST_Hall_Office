@@ -7,6 +7,7 @@ import HallCard from "@/components/HallCard";
 import { getStoredUser } from "@/lib/auth";
 import ApplySeatButton from "@/components/ApplySeatButton";
 import ViewMangeApplication from "@/components/ViewManageApplication";
+import TrackApplicationButton from "@/components/TrackApplicationButton";
 
 
 type AnyUser =
@@ -114,13 +115,22 @@ export default function HallPortal() {
         >
         {/* Show only to normal users */}
         {!isSuperUser && (
-          <HallCard
-            key="apply-seat"
-            section="Apply for Seat"
-            description="Submit your application to secure a seat in the hall."
-          >
-            <ApplySeatButton />
-          </HallCard>
+          <>
+            <HallCard
+              key="apply-seat"
+              section="Apply for Seat"
+              description="Submit your application to secure a seat in the hall."
+            >
+              <ApplySeatButton />
+            </HallCard>
+            <HallCard
+              key="track-application"
+              section="Track Application"
+              description="Check your application status using your tracking credentials."
+            >
+              <TrackApplicationButton />
+            </HallCard>
+          </>
         )}
 
         {/* Show only to superusers/admins */}
