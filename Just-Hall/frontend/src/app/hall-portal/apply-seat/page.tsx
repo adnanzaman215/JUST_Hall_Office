@@ -290,7 +290,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter your full name"
                 required
               />
@@ -303,7 +303,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. 210101"
                 required
               />
@@ -316,7 +316,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. Computer Science"
                 required
               />
@@ -329,7 +329,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={session}
                 onChange={(e) => setSession(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. 2021-2025"
                 required
               />
@@ -342,7 +342,7 @@ export default function ApplySeatPage() {
                 type="date"
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 required
               />
             </div>
@@ -353,7 +353,7 @@ export default function ApplySeatPage() {
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 required
               >
                 <option value="">Select Gender</option>
@@ -380,7 +380,7 @@ export default function ApplySeatPage() {
                 type="tel"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. 01712345678"
                 required
               />
@@ -393,7 +393,7 @@ export default function ApplySeatPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="your.email@example.com"
                 required
               />
@@ -406,7 +406,7 @@ export default function ApplySeatPage() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 rows={3}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter your complete permanent address"
                 required
               />
@@ -429,7 +429,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={fatherName}
                 onChange={(e) => setFatherName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter father's name"
                 required
               />
@@ -442,7 +442,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={fatherOccupation}
                 onChange={(e) => setFatherOccupation(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. Teacher, Business, etc."
               />
             </div>
@@ -454,7 +454,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={motherName}
                 onChange={(e) => setMotherName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter mother's name"
                 required
               />
@@ -467,7 +467,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={motherOccupation}
                 onChange={(e) => setMotherOccupation(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="e.g. Housewife, Doctor, etc."
               />
             </div>
@@ -479,7 +479,7 @@ export default function ApplySeatPage() {
                 type="number"
                 value={householdIncome}
                 onChange={(e) => setHouseholdIncome(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter annual household income in BDT"
                 min="0"
                 step="1000"
@@ -503,7 +503,7 @@ export default function ApplySeatPage() {
                 type="text"
                 value={paymentSlipNo}
                 onChange={(e) => setPaymentSlipNo(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
                 placeholder="Enter payment slip number"
                 required
               />

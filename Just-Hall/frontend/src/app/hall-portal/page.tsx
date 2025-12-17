@@ -116,7 +116,7 @@ export default function HallPortal() {
             section="Apply for Seat"
             description="Students can apply for a seat in the hall."
           >
-            <ApplySeatButton className="btn btn-primary px-4 py-2 rounded-xl" />
+            <ApplySeatButton />
           </HallCard>
         )}
 

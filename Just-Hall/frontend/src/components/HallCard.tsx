@@ -20,7 +20,7 @@ const HallCard = ({ section, description, href, onClick, children }: HallCardPro
         <div className="mt-4">{children}</div>
       ) : onClick ? (
         <button
-          className="mt-4 px-4 py-2 bg-gradiant-5 text-black rounded-md hover:bg-blue-500"
+          className="mt-4 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-md hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
           onClick={onClick}
         >
           {section}
