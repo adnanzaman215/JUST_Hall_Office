@@ -19,7 +19,12 @@ namespace JustHallAPI.DTOs
         public decimal? HouseholdIncome { get; set; }
         public string PaymentSlipNo { get; set; } = string.Empty;
         public string? PaymentSlipUrl { get; set; }
+        public string? ProfilePhotoUrl { get; set; }
+        public string? UserId { get; set; }
+        public string? Password { get; set; }
         public string Status { get; set; } = string.Empty;
+        public DateTime? VivaDate { get; set; }
+        public int? VivaSerialNo { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
@@ -48,6 +53,18 @@ namespace JustHallAPI.DTOs
 
     public class UpdateApplicationStatusRequest
     {
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class TrackApplicationRequest
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class ScheduleVivaRequest
+    {
+        public DateTime VivaDate { get; set; }
         public string Status { get; set; } = string.Empty;
     }
 }

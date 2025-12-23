@@ -87,7 +87,12 @@ namespace JustHallAPI.Controllers
                 HouseholdIncome = a.HouseholdIncome,
                 PaymentSlipNo = a.PaymentSlipNo,
                 PaymentSlipUrl = a.PaymentSlipUrl,
+                ProfilePhotoUrl = a.ProfilePhotoUrl,
+                UserId = a.UserId,
+                Password = a.Password,
                 Status = a.Status,
+                VivaDate = a.VivaDate,
+                VivaSerialNo = a.VivaSerialNo,
                 CreatedAt = a.CreatedAt
             }).ToList();
 
@@ -183,7 +188,7 @@ namespace JustHallAPI.Controllers
 
         // PATCH: api/applications/{id}/status
         [HttpPatch("{id}/status")]
-        [Authorize(Roles = "admin")]
+        [AllowAnonymous]
         public async Task<ActionResult<ApplicationDto>> UpdateApplicationStatus(int id, [FromBody] UpdateApplicationStatusRequest request)
         {
             var application = await _context.Applications.FindAsync(id);
@@ -251,7 +256,86 @@ namespace JustHallAPI.Controllers
                 await payment_slip.CopyToAsync(stream);
             }
 
-            return Ok(new { paymentSlipUrl = $"payment_slips/{fileName}" });
+            return Ok(new { paymentSlipUrl = $"/media/payment_slips/{fileName}" });
+        }
+
+        // POST: api/applications/track
+        [HttpPost("track")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApplicationDto>> TrackApplication([FromBody] TrackApplicationRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.UserId) || string.IsNullOrWhiteSpace(request.Password))
+                return BadRequest(new { error = "User ID and Password are required" });
+
+            // Find application by userId and password
+            var application = await _context.Applications
+                .Where(a => a.UserId == request.UserId && a.Password == request.Password)
+                .FirstOrDefaultAsync();
+
+            if (application == null)
+                return NotFound(new { error = "Application not found. Please check your credentials." });
+
+            var applicationDto = new ApplicationDto
+            {
+                Id = application.Id,
+                FullName = application.FullName,
+                StudentId = application.StudentId,
+                Department = application.Department,
+                Session = application.Session,
+                Dob = application.Dob,
+                Gender = application.Gender,
+                Mobile = application.Mobile,
+                Email = application.Email,
+                Address = application.Address,
+                FatherName = application.FatherName,
+                MotherName = application.MotherName,
+                FatherOccupation = application.FatherOccupation,
+                MotherOccupation = application.MotherOccupation,
+                HouseholdIncome = application.HouseholdIncome,
+                PaymentSlipNo = application.PaymentSlipNo,
+                PaymentSlipUrl = application.PaymentSlipUrl,
+                ProfilePhotoUrl = application.ProfilePhotoUrl,
+                UserId = application.UserId,
+                Password = application.Password,
+                Status = application.Status,
+                VivaDate = application.VivaDate,
+                VivaSerialNo = application.VivaSerialNo,
+                CreatedAt = application.CreatedAt
+            };
+
+            return Ok(applicationDto);
+        }
+
+        // PATCH: api/applications/{id}/viva
+        [HttpPatch("{id}/viva")]
+        [AllowAnonymous]
+        public async Task<ActionResult> ScheduleViva(int id, [FromBody] ScheduleVivaRequest request)
+        {
+            var application = await _context.Applications.FindAsync(id);
+            if (application == null)
+                return NotFound(new { error = "Application not found" });
+
+            // Generate serial number based on viva date (resets daily)
+            var vivaDateOnly = request.VivaDate.Date;
+            var applicationsOnSameDate = await _context.Applications
+                .Where(a => a.VivaDate.HasValue && a.VivaDate.Value.Date == vivaDateOnly)
+                .CountAsync();
+            
+            var serialNo = applicationsOnSameDate + 1;
+
+            // Update viva date, serial number, and status
+            application.VivaDate = request.VivaDate;
+            application.VivaSerialNo = serialNo;
+            application.Status = request.Status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                message = "Viva scheduled successfully", 
+                vivaDate = application.VivaDate, 
+                vivaSerialNo = application.VivaSerialNo,
+                status = application.Status 
+            });
         }
     }
 }

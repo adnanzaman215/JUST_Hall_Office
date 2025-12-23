@@ -3,6 +3,7 @@ using System;
 using JustHallAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JustHallAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251217145727_AddVivaSerialNoColumn")]
+    partial class AddVivaSerialNoColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -281,40 +284,6 @@ namespace JustHallAPI.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("notices_notice", (string)null);
-                });
-
-            modelBuilder.Entity("JustHallAPI.Models.SeatAllocation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<int>("ApplicationId")
-                        .HasColumnType("int")
-                        .HasColumnName("application_id");
-
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("assigned_at");
-
-                    b.Property<int>("FloorNumber")
-                        .HasColumnType("int")
-                        .HasColumnName("floor_number");
-
-                    b.Property<int>("RoomNumber")
-                        .HasColumnType("int")
-                        .HasColumnName("room_number");
-
-                    b.Property<int>("SeatNumber")
-                        .HasColumnType("int")
-                        .HasColumnName("seat_number");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationId");
-
-                    b.ToTable("seat_allocations");
                 });
 
             modelBuilder.Entity("JustHallAPI.Models.Staff", b =>
@@ -591,17 +560,6 @@ namespace JustHallAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("JustHallAPI.Models.SeatAllocation", b =>
-                {
-                    b.HasOne("JustHallAPI.Models.Application", "Application")
-                        .WithMany()
-                        .HasForeignKey("ApplicationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Application");
                 });
 
             modelBuilder.Entity("JustHallAPI.Models.Staff", b =>

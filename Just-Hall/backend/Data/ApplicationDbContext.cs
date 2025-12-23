@@ -16,6 +16,7 @@ namespace JustHallAPI.Data
         public DbSet<Admin> Admins { get; set; }
         public DbSet<Application> Applications { get; set; }
         public DbSet<Notice> Notices { get; set; }
+        public DbSet<SeatAllocation> SeatAllocations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

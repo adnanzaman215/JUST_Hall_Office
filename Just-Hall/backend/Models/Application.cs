@@ -100,6 +100,12 @@ namespace JustHallAPI.Models
         [Column("status")]
         public string Status { get; set; } = "Pending";
 
+        [Column("viva_date")]
+        public DateTime? VivaDate { get; set; }
+
+        [Column("viva_serial_no")]
+        public int? VivaSerialNo { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
