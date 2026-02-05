@@ -44,7 +44,6 @@ export const officeSections: OfficeSection[] = [
       name: "Provost Office",
       icon: "🏛️",
       contact: {
-        phone: "+880-1XXXXXXXXX",
         email: "provost@university.edu",
       },
       location: {

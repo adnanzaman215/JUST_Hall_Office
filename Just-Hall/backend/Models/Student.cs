@@ -62,7 +62,7 @@ namespace JustHallAPI.Models
         [Column("address")]
         public string Address { get; set; } = string.Empty;
 
-        [MaxLength(100)]
+        [MaxLength(500)]
         [Column("photo_url")]
         public string? PhotoUrl { get; set; }
 

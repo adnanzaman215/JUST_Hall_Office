@@ -18,6 +18,7 @@ namespace JustHallAPI.Data
         public DbSet<Notice> Notices { get; set; }
         public DbSet<SeatAllocation> SeatAllocations { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<Appointment> Appointments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -104,6 +105,26 @@ namespace JustHallAPI.Data
                 entity.HasOne(p => p.Verifier)
                     .WithMany()
                     .HasForeignKey(p => p.VerifiedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Appointment configuration
+            modelBuilder.Entity<Appointment>(entity =>
+            {
+                entity.ToTable("appointments");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.StudentId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.AppointmentDate);
+                
+                entity.HasOne(a => a.Student)
+                    .WithMany()
+                    .HasForeignKey(a => a.StudentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                entity.HasOne(a => a.RespondedBy)
+                    .WithMany()
+                    .HasForeignKey(a => a.RespondedById)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }
