@@ -6,6 +6,9 @@ const RAW_BASE =
   "http://localhost:8000/api";
 const API_BASE_URL = RAW_BASE.replace(/\/+$/, "");
 
+// Export backend server URL for file downloads
+export const BACKEND_URL = API_BASE_URL.replace(/\/api$/, "");
+
 function join(base: string, endpoint: string) {
   const e = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   return `${base}${e}`;
@@ -381,26 +384,285 @@ export const authAPI = {
 };
 
 /* ========== NOTICES API ========== */
+export interface Notice {
+  id: number;
+  title: string;
+  body: string;
+  category: string;
+  author: string;
+  pinned: boolean;
+  attachmentUrl?: string | null;
+  expiresAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNoticeRequest {
+  title: string;
+  body: string;
+  category?: string;
+  author?: string;
+  pinned?: boolean;
+  attachmentUrl?: string;
+  expiresAt?: string;
+}
+
+export interface UpdateNoticeRequest {
+  title?: string;
+  body?: string;
+  category?: string;
+  author?: string;
+  pinned?: boolean;
+  attachmentUrl?: string;
+  expiresAt?: string;
+}
+
 export const noticesAPI = {
-  // Get all notices
-  getNotices: async () => {
-    return apiRequest<any[]>('/notices/');
+  // Get all notices (public)
+  getNotices: async (): Promise<Notice[]> => {
+    const response = await fetch(`${API_BASE_URL}/notices`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch notices');
+    }
+
+    return await response.json();
   },
 
-  // Get notice by ID
-  getNotice: async (id: string) => {
-    return apiRequest<any>(`/notices/${id}/`);
+  // Get notice by ID (public)
+  getNotice: async (id: number): Promise<Notice> => {
+    const response = await fetch(`${API_BASE_URL}/notices/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch notice');
+    }
+
+    return await response.json();
   },
 
   // Create notice (admin only)
-  createNotice: async (noticeData: any, token: string) => {
-    return apiRequest<any>('/notices/', {
+  createNotice: async (noticeData: CreateNoticeRequest, token: string): Promise<Notice> => {
+    const response = await fetch(`${API_BASE_URL}/notices`, {
       method: 'POST',
       headers: {
-        Authorization: `Token ${token}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(noticeData),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create notice');
+    }
+
+    return await response.json();
+  },
+
+  // Update notice (admin only)
+  updateNotice: async (id: number, noticeData: UpdateNoticeRequest, token: string): Promise<Notice> => {
+    const response = await fetch(`${API_BASE_URL}/notices/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(noticeData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update notice');
+    }
+
+    return await response.json();
+  },
+
+  // Delete notice (admin only)
+  deleteNotice: async (id: number, token: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/notices/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete notice');
+    }
+  },
+
+  // Upload attachment (admin only)
+  uploadAttachment: async (file: File, token: string): Promise<{ url: string; fileName: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/notices/upload-attachment`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to upload file');
+    }
+
+    return await response.json();
+  },
+};
+
+/* ================== APPOINTMENTS API ================== */
+
+export interface Appointment {
+  id: number;
+  studentId: number;
+  studentName: string;
+  studentEmail: string;
+  studentPhone: string;
+  reason: string;
+  additionalNotes?: string | null;
+  status: string; // Pending, Approved, Rejected, Completed, Cancelled
+  appointmentDate?: string | null;
+  appointmentTime?: string | null;
+  provostResponse?: string | null;
+  requestedAt: string;
+  respondedAt?: string | null;
+  respondedByName?: string | null;
+}
+
+export interface CreateAppointmentDTO {
+  reason: string;
+  additionalNotes?: string;
+}
+
+export interface UpdateAppointmentStatusDTO {
+  status: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
+  provostResponse?: string;
+}
+
+export const appointmentsAPI = {
+  // Get all appointments (Admin only)
+  getAll: async (token: string): Promise<Appointment[]> => {
+    const response = await fetch(`${API_BASE_URL}/appointments`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch appointments');
+    }
+
+    return await response.json();
+  },
+
+  // Get my appointments (Student)
+  getMy: async (token: string): Promise<Appointment[]> => {
+    const response = await fetch(`${API_BASE_URL}/appointments/my`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch appointments');
+    }
+
+    return await response.json();
+  },
+
+  // Get appointment by ID
+  getById: async (id: number, token: string): Promise<Appointment> => {
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch appointment');
+    }
+
+    return await response.json();
+  },
+
+  // Create new appointment (Student)
+  create: async (data: CreateAppointmentDTO, token: string): Promise<Appointment> => {
+    const response = await fetch(`${API_BASE_URL}/appointments`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create appointment');
+    }
+
+    return await response.json();
+  },
+
+  // Update appointment status (Admin only)
+  updateStatus: async (id: number, data: UpdateAppointmentStatusDTO, token: string): Promise<Appointment> => {
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update appointment');
+    }
+
+    return await response.json();
+  },
+
+  // Delete/Cancel appointment
+  delete: async (id: number, token: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to cancel appointment');
+    }
   },
 };
 

@@ -56,13 +56,20 @@ export default function ProfilePage() {
         role: userRole,
       };
 
+      // Helper function to format date for input type="date"
+      const formatDateForInput = (dateStr: string | null) => {
+        if (!dateStr) return "";
+        // Convert "2026-02-05T00:00:00" to "2026-02-05"
+        return dateStr.split('T')[0];
+      };
+
       // Add role-specific data from API response
       if (userRole.toLowerCase() === "student" && profileData?.student) {
         data.studentId = profileData.student.studentId || "";
         data.department = profileData.student.department || "";
         data.session = profileData.student.session || "";
         data.roomNo = profileData.student.roomNo;
-        data.dob = profileData.student.dob || "";
+        data.dob = formatDateForInput(profileData.student.dob);
         data.gender = profileData.student.gender || "";
         data.bloodGroup = profileData.student.bloodGroup || "";
         data.fatherName = profileData.student.fatherName || "";
@@ -75,7 +82,7 @@ export default function ProfilePage() {
         data.employeeId = profileData.staff.employeeId || "";
         data.department = profileData.staff.department || "";
         data.designation = profileData.staff.designation || "";
-        data.dob = profileData.staff.dob || "";
+        data.dob = formatDateForInput(profileData.staff.dob);
         data.gender = profileData.staff.gender || "";
         data.bloodGroup = profileData.staff.bloodGroup || "";
         data.qualification = profileData.staff.qualification || "";
@@ -87,7 +94,7 @@ export default function ProfilePage() {
         data.adminId = profileData.admin.adminId || "";
         data.department = profileData.admin.department || "";
         data.designation = profileData.admin.designation || "";
-        data.dob = profileData.admin.dob || "";
+        data.dob = formatDateForInput(profileData.admin.dob);
         data.gender = profileData.admin.gender || "";
         data.mobileNumber = profileData.admin.mobileNumber || "";
         data.address = profileData.admin.address || "";

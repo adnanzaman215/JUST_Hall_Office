@@ -3,6 +3,7 @@ using System;
 using JustHallAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JustHallAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260205171609_IncreasePhotoUrlLength")]
+    partial class IncreasePhotoUrlLength
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -227,61 +230,6 @@ namespace JustHallAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("hallcore_application", (string)null);
-                });
-
-            modelBuilder.Entity("JustHallAPI.Models.Appointment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("AdditionalNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)");
-
-                    b.Property<DateTime?>("AppointmentDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<TimeSpan?>("AppointmentTime")
-                        .HasColumnType("time(6)");
-
-                    b.Property<string>("ProvostResponse")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<DateTime>("RequestedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("RespondedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("RespondedById")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<int>("StudentId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AppointmentDate");
-
-                    b.HasIndex("RespondedById");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("StudentId");
-
-                    b.ToTable("appointments", (string)null);
                 });
 
             modelBuilder.Entity("JustHallAPI.Models.Notice", b =>
@@ -743,24 +691,6 @@ namespace JustHallAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("JustHallAPI.Models.Appointment", b =>
-                {
-                    b.HasOne("JustHallAPI.Models.Admin", "RespondedBy")
-                        .WithMany()
-                        .HasForeignKey("RespondedById")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("JustHallAPI.Models.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RespondedBy");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("JustHallAPI.Models.Payment", b =>

@@ -12,10 +12,12 @@ namespace JustHallAPI.Controllers
     public class NoticesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public NoticesController(ApplicationDbContext context)
+        public NoticesController(ApplicationDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
         }
 
         // GET: api/notices
@@ -166,10 +168,67 @@ namespace JustHallAPI.Controllers
             if (notice == null)
                 return NotFound(new { error = "Notice not found" });
 
+            // Delete associated file if exists
+            if (!string.IsNullOrEmpty(notice.AttachmentUrl))
+            {
+                var filePath = Path.Combine(_environment.ContentRootPath, notice.AttachmentUrl.TrimStart('/'));
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+
             _context.Notices.Remove(notice);
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // POST: api/notices/upload-attachment
+        [HttpPost("upload-attachment")]
+        [Authorize(Roles = "admin")]
+        public async Task<ActionResult<object>> UploadAttachment([FromForm] IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { error = "No file uploaded" });
+
+            // Validate file type
+            var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".jpg", ".jpeg", ".png" };
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            
+            if (!allowedExtensions.Contains(fileExtension))
+                return BadRequest(new { error = "Invalid file type. Allowed: PDF, Word, Excel, PowerPoint, Text, Images" });
+
+            // Validate file size (max 10MB)
+            if (file.Length > 10 * 1024 * 1024)
+                return BadRequest(new { error = "File size exceeds 10MB limit" });
+
+            try
+            {
+                // Generate unique filename
+                var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                var uploadsFolder = Path.Combine(_environment.ContentRootPath, "media", "notice_attachments");
+                
+                // Ensure directory exists
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                // Save file
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // Return URL path
+                var fileUrl = $"/media/notice_attachments/{uniqueFileName}";
+                return Ok(new { url = fileUrl, fileName = file.FileName });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"File upload failed: {ex.Message}" });
+            }
         }
     }
 }

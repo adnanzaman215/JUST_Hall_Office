@@ -42,7 +42,7 @@ export default function Navbar() {
           <div className="hidden lg:flex items-center gap-1">
             <NavLink href="/" label="Home" />
             <NavLink href="/hall-portal" label="Hall Portal" />
-            <NavLink href="/notice-board" label="Notices" />
+            <NavLink href="/notices" label="Notices" />
             <NavLink href="/facilities" label="Facilities" />
             <NavLink href="/office" label="Office" />
             <NavLink href="/faq" label="FAQ" />
@@ -119,6 +119,24 @@ export default function Navbar() {
                         </svg>
                         Settings
                       </Link>
+                      {user?.role?.toLowerCase() === 'admin' && (
+                        <>
+                          <hr className="my-2 border-gray-700" />
+                          <div className="px-4 py-1.5">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</p>
+                          </div>
+                          <Link 
+                            href="/admin/notices" 
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-cyan-300 transition-colors"
+                            onClick={() => setProfileDropdownOpen(false)}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                            </svg>
+                            Manage Notices
+                          </Link>
+                        </>
+                      )}
                       <hr className="my-2 border-gray-700" />
                       <button
                         onClick={handleLogout}
@@ -158,7 +176,7 @@ export default function Navbar() {
             <div className="flex flex-col space-y-1">
               <MobileNavLink href="/" label="Home" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/hall-portal" label="Hall Portal" onClick={() => setMenuOpen(false)} />
-              <MobileNavLink href="/notice-board" label="Notices" onClick={() => setMenuOpen(false)} />
+              <MobileNavLink href="/notices" label="Notices" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/facilities" label="Facilities" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/office" label="Office" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/faq" label="FAQ" onClick={() => setMenuOpen(false)} />
