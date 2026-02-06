@@ -1,634 +1,135 @@
-'use client';
+//src/app/hall-portal/payments/page.tsx
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/auth-context';
-import { useRouter } from 'next/navigation';
-import { 
-  CreditCard, 
-  Upload, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  FileText,
-  Calendar,
-  Building2,
-  Hash,
-  DollarSign,
-  AlertCircle
-} from 'lucide-react';
-
-interface Payment {
-  id: number;
-  studentId: number;
-  studentName: string;
-  studentIdNumber: string;
-  paymentType: string;
-  amount: number;
-  paymentYear: number;
-  semester: string | null;
-  bankName: string;
-  transactionId: string;
-  paymentDate: string;
-  receiptUrl: string;
-  status: string;
-  verifiedBy: number | null;
-  verifierName: string | null;
-  verifiedAt: string | null;
-  rejectionReason: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string | null;
-}
-
-interface PaymentDues {
-  currentYear: number;
-  requiredAmount: number;
-  paidAmount: number;
-  dueAmount: number;
-  isPaid: boolean;
-  paymentsForYear: Payment[];
-}
+import React from "react";
+import { useRouter } from "next/navigation";
 
 export default function PaymentsPage() {
-  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [paymentDues, setPaymentDues] = useState<PaymentDues[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-
-  // Form state for new payment
-  const [formData, setFormData] = useState({
-    paymentType: 'yearly',
-    amount: '',
-    paymentYear: new Date().getFullYear(),
-    semester: '',
-    bankName: '',
-    transactionId: '',
-    paymentDate: new Date().toISOString().split('T')[0],
-    notes: ''
-  });
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-
-  // Check authentication
-  useEffect(() => {
-    if (!authLoading) {
-      if (!isAuthenticated) {
-        router.push('/');
-      } else {
-        setInitialLoadComplete(true);
-      }
-    }
-  }, [isAuthenticated, authLoading, router]);
-
-  // Fetch data when authenticated
-  useEffect(() => {
-    if (token && initialLoadComplete) {
-      fetchPaymentDues();
-      fetchPaymentHistory();
-    }
-  }, [token, initialLoadComplete]);
-
-  const fetchPaymentDues = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const response = await fetch('http://192.168.0.116:8000/api/payments/all-dues', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPaymentDues(data);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to load payment dues');
-      }
-    } catch (err) {
-      console.error('Error fetching payment dues:', err);
-      setError('Unable to connect to server. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPaymentHistory = async () => {
-    try {
-      const response = await fetch('http://192.168.0.116:8000/api/payments/my-payments', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPayments(data);
-      } else {
-        const errorData = await response.json();
-        console.error('Error fetching payment history:', errorData.message);
-      }
-    } catch (err) {
-      console.error('Error fetching payment history:', err);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setReceiptFile(e.target.files[0]);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const openPaymentModal = (year: number) => {
-    setSelectedYear(year);
-    setFormData({
-      ...formData,
-      paymentYear: year
-    });
-    setShowPaymentModal(true);
-    setError('');
-    setSuccess('');
-  };
-
-  const closePaymentModal = () => {
-    setShowPaymentModal(false);
-    setSelectedYear(null);
-    setFormData({
-      paymentType: 'yearly',
-      amount: '',
-      paymentYear: new Date().getFullYear(),
-      semester: '',
-      bankName: '',
-      transactionId: '',
-      paymentDate: new Date().toISOString().split('T')[0],
-      notes: ''
-    });
-    setReceiptFile(null);
-    setError('');
-    setSuccess('');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!receiptFile) {
-      setError('Please upload a payment receipt');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      const formDataToSend = new FormData();
-      formDataToSend.append('paymentType', formData.paymentType);
-      formDataToSend.append('amount', formData.amount);
-      formDataToSend.append('paymentYear', formData.paymentYear.toString());
-      if (formData.semester) formDataToSend.append('semester', formData.semester);
-      formDataToSend.append('bankName', formData.bankName);
-      formDataToSend.append('transactionId', formData.transactionId);
-      formDataToSend.append('paymentDate', formData.paymentDate);
-      if (formData.notes) formDataToSend.append('notes', formData.notes);
-      formDataToSend.append('receiptFile', receiptFile);
-
-      const response = await fetch('http://192.168.0.116:8000/api/payments/create', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formDataToSend
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess('Payment submitted successfully! Waiting for verification.');
-        
-        // Refresh data
-        fetchPaymentDues();
-        fetchPaymentHistory();
-        
-        // Close modal after short delay
-        setTimeout(() => {
-          closePaymentModal();
-        }, 2000);
-      } else {
-        setError(data.message || 'Failed to submit payment');
-      }
-    } catch (err) {
-      console.error('Payment submission error:', err);
-      setError(`An error occurred while submitting payment: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'verified':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-            <CheckCircle className="w-4 h-4 mr-1" />
-            Verified
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-            <XCircle className="w-4 h-4 mr-1" />
-            Rejected
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="w-4 h-4 mr-1" />
-            Pending
-          </span>
-        );
-    }
-  };
-
-  // Show loading state while checking authentication
-  if (authLoading || !initialLoadComplete) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render if not authenticated
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Hall Fee Payments</h1>
-          <p className="text-gray-600">Manage your yearly hall fee payments and view payment history</p>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Payment Status */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Status</h2>
-            
-            {loading ? (
-              <div className="bg-white rounded-lg shadow-md p-12 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading...</p>
-              </div>
-            ) : paymentDues.length > 0 ? (
-              <div className="space-y-4">
-                {paymentDues.map((yearDues) => (
-                  <div key={yearDues.currentYear} className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
-                    yearDues.isPaid ? 'border-green-500' : 'border-yellow-500'
-                  }`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-bold text-gray-900">
-                        Year {yearDues.currentYear}
-                      </h3>
-                      {yearDues.isPaid ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Paid
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          Due
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Required:</span>
-                        <span className="font-semibold text-gray-900">৳{yearDues.requiredAmount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Paid:</span>
-                        <span className="font-semibold text-green-600">৳{yearDues.paidAmount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Due:</span>
-                        <span className="font-semibold text-red-600">৳{yearDues.dueAmount.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {!yearDues.isPaid && (
-                      <button
-                        onClick={() => openPaymentModal(yearDues.currentYear)}
-                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                      >
-                        Pay Now
-                      </button>
-                    )}
-
-                    {/* Show recent payments for this year */}
-                    {yearDues.paymentsForYear.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <p className="text-xs font-medium text-gray-500 mb-2">Recent Payments:</p>
-                        {yearDues.paymentsForYear.slice(0, 2).map((payment) => (
-                          <div key={payment.id} className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                            <span>৳{payment.amount.toLocaleString()}</span>
-                            {getStatusBadge(payment.status)}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-md p-12 text-center">
-                <p className="text-gray-600">No payment information available</p>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column - Payment History */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment History</h2>
-            
-            {payments.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-md p-12 text-center">
-                <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No payment history found</p>
-              </div>
-            ) : (
-              <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
-                {payments.map((payment) => (
-                  <div key={payment.id} className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-blue-100 p-2 rounded-full">
-                          <CreditCard className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">৳{payment.amount.toLocaleString()}</h3>
-                          <p className="text-xs text-gray-600">{payment.paymentYear} - {payment.paymentType}</p>
-                        </div>
-                      </div>
-                      {getStatusBadge(payment.status)}
-                    </div>
-
-                    <div className="space-y-1 text-sm text-gray-600 mb-3">
-                      <div className="flex items-center">
-                        <Building2 className="w-3 h-3 mr-2" />
-                        <span className="text-xs">{payment.bankName}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Hash className="w-3 h-3 mr-2" />
-                        <span className="text-xs">Scroll: {payment.transactionId}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="w-3 h-3 mr-2" />
-                        <span className="text-xs">{new Date(payment.paymentDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-
-                    {payment.status === 'verified' && payment.verifierName && (
-                      <div className="p-2 bg-green-50 rounded text-xs text-green-800 mb-2">
-                        <CheckCircle className="w-3 h-3 inline-block mr-1" />
-                        Verified by {payment.verifierName}
-                      </div>
-                    )}
-
-                    {payment.rejectionReason && (
-                      <div className="p-2 bg-red-50 rounded text-xs text-red-800 mb-2">
-                        <XCircle className="w-3 h-3 inline-block mr-1" />
-                        {payment.rejectionReason}
-                      </div>
-                    )}
-
-                    <a
-                      href={`http://192.168.0.116:8000/${payment.receiptUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs font-medium"
-                    >
-                      <FileText className="w-3 h-3 mr-1" />
-                      View Receipt
-                    </a>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Payment Modal */}
-        {showPaymentModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h3 className="text-2xl font-bold text-gray-900">
-                  Upload Payment Receipt - Year {selectedYear}
-                </h3>
-                <button
-                  onClick={closePaymentModal}
-                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="p-6">
-                {error && (
-                  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
-                    {error}
-                  </div>
-                )}
-                
-                {success && (
-                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
-                    {success}
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Payment Type
-                      </label>
-                      <select
-                        name="paymentType"
-                        value={formData.paymentType}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        required
-                      >
-                        <option value="yearly">Yearly Fee</option>
-                        <option value="admission">Admission Fee</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Amount (৳)
-                      </label>
-                      <input
-                        type="number"
-                        name="amount"
-                        value={formData.amount}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        placeholder="15000"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Payment Year
-                      </label>
-                      <input
-                        type="number"
-                        name="paymentYear"
-                        value={formData.paymentYear}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        required
-                        readOnly
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Semester (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        name="semester"
-                        value={formData.semester}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        placeholder="Spring 2026"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Bank Name
-                      </label>
-                      <select
-                        name="bankName"
-                        value={formData.bankName}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        required
-                      >
-                        <option value="">Select Bank</option>
-                        <option value="Agrani Bank PLC">Agrani Bank PLC</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Scroll No.
-                      </label>
-                      <input
-                        type="text"
-                        name="transactionId"
-                        value={formData.transactionId}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        placeholder="SCR123456789"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Payment Date
-                      </label>
-                      <input
-                        type="date"
-                        name="paymentDate"
-                        value={formData.paymentDate}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Receipt Upload
-                      </label>
-                      <input
-                        type="file"
-                        onChange={handleFileChange}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        required
-                      />
-                      {receiptFile && (
-                        <p className="mt-1 text-xs text-gray-600">Selected: {receiptFile.name}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notes (Optional)
-                    </label>
-                    <textarea
-                      name="notes"
-                      value={formData.notes}
-                      onChange={handleInputChange}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      placeholder="Any additional information..."
-                    />
-                  </div>
-
-                  <div className="flex space-x-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={closePaymentModal}
-                      className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                      {loading ? 'Submitting...' : 'Submit Payment'}
-                    </button>
-                  </div>
-                </form>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+      <div className="max-w-7xl mx-auto px-5 py-12">
+        {/* Header Section */}
+        <section className="mb-8">
+          <div className="rounded-3xl px-6 md:px-10 py-8 md:py-10 bg-gradient-to-r from-[#0f2027] via-[#0f5e73] to-[#0b7872] text-white shadow-2xl">
+            <div className="flex items-start gap-4">
+              <button
+                onClick={() => router.back()}
+                className="mt-1 p-2 hover:bg-white/10 rounded-lg transition-colors"
+                aria-label="Go back"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+              <div className="flex-1">
+                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">Hall Fee Payments</h1>
+                <p className="text-white/90 mt-2 md:mt-3 text-lg">
+                  Choose the type of payment you want to make
+                </p>
               </div>
             </div>
           </div>
-        )}
+        </section>
+
+        {/* Payment Types Section */}
+        <section aria-label="Payment Types" className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Yearly Hall Application Fees Card */}
+            <div className="group bg-white rounded-2xl shadow-xl border border-slate-200 hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-3xl">
+                    🏠
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Yearly Hall Fees</h3>
+                    <p className="text-green-100 text-sm mt-1">Pay your annual hall application fees</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-center gap-3 text-gray-700">
+                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Submit payment details</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-gray-700">
+                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Upload payment receipt</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-gray-700">
+                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Get payment verified</span>
+                  </li>
+                </ul>
+                <button 
+                  onClick={() => router.push('/hall-portal/payments/hall-fee')}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Pay Hall Fees
+                </button>
+              </div>
+            </div>
+
+            {/* NOC Fees Card */}
+            <div className="group bg-white rounded-2xl shadow-xl border border-slate-200 hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="bg-gradient-to-br from-blue-500 to-cyan-600 p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-3xl">
+                    📜
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">NOC Fees</h3>
+                    <p className="text-blue-100 text-sm mt-1">Pay fees for NOC certificate</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-center gap-3 text-gray-700">
+                    <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Submit NOC fee payment</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-gray-700">
+                    <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Upload payment proof</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-gray-700">
+                    <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Await verification</span>
+                  </li>
+                </ul>
+                <button 
+                  onClick={() => router.push('/hall-portal/payments/noc-fees')}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Pay NOC Fees
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

@@ -117,10 +117,18 @@ export default function HallPortal() {
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               <HallCard
                 key="apply-seat"
-                section="Apply for Seat"
+                section="Applications"
                 description="Submit your application to secure a seat in the hall."
               >
-                <ApplySeatButton />
+                <button 
+                  onClick={() => router.push('/hall-portal/applications')}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Apply
+                </button>
               </HallCard>
               <HallCard
                 key="track-application"
@@ -131,8 +139,8 @@ export default function HallPortal() {
               </HallCard>
               <HallCard
                 key="payments"
-                section="Hall Fee Payments"
-                description="Pay your yearly hall fees and upload payment receipts."
+                section="Payments"
+                description="Pay your hall fees and NOC charges."
               >
                 <button 
                   onClick={() => router.push('/hall-portal/payments')}

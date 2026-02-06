@@ -7,7 +7,7 @@ export default function ApplySeatButton({ className = "" }) {
   const router = useRouter();
 
   const handleClick = () => {
-      router.push("/hall-portal/apply-seat");
+      router.push("/hall-portal/applications/apply-seat");
   };
 
   const defaultClasses = "mt-4 w-full px-6 py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold text-base rounded-xl hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-2xl border-2 border-red-400 flex items-center justify-center gap-2";
