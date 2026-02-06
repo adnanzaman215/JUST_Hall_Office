@@ -67,4 +67,9 @@ namespace JustHallAPI.DTOs
         public DateTime VivaDate { get; set; }
         public string Status { get; set; } = string.Empty;
     }
+
+    public class ApproveApplicationRequest
+    {
+        public int RoomNumber { get; set; }
+    }
 }

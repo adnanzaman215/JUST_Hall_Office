@@ -29,8 +29,13 @@ namespace JustHallAPI.Models
         [Column("session")]
         public string Session { get; set; } = string.Empty;
 
+        [MaxLength(20)]
+        [Column("residence_status")]
+        public string ResidenceStatus { get; set; } = "non-resident";
+
+        [MaxLength(20)]
         [Column("room_no")]
-        public int RoomNo { get; set; } = 0;
+        public string? RoomNo { get; set; }
 
         [Column("dob")]
         public DateTime? Dob { get; set; }

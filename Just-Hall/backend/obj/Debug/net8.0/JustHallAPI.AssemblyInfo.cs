@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("JustHallAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dd80edcc8bf9aa3ec606d517d0625b0877c8b659")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f3e6e1d16596d41e2727cf3aa063caace4b9f963")]
 [assembly: System.Reflection.AssemblyProductAttribute("JustHallAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("JustHallAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

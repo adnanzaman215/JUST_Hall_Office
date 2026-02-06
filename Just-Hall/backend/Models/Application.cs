@@ -106,6 +106,10 @@ namespace JustHallAPI.Models
         [Column("viva_serial_no")]
         public int? VivaSerialNo { get; set; }
 
+        [MaxLength(20)]
+        [Column("room_no")]
+        public string? RoomNo { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

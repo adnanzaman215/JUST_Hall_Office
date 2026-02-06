@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { getAuthState, clearAuthData, storeToken, storeUser, User } from '@/lib/auth';
 import { authAPI } from '@/lib/api';
 
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -54,6 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearAuthData();
     setUser(null);
     setToken(null);
+    
+    // Redirect to home page
+    router.push('/');
   };
 
   const updateUser = (updatedUser: User) => {

@@ -99,6 +99,89 @@ namespace JustHallAPI.Controllers
             return Ok(applicationDtos);
         }
 
+        // GET: api/applications/pending/count
+        [HttpGet("pending/count")]
+        [AllowAnonymous]
+        public async Task<ActionResult> GetPendingApplicationsCount()
+        {
+            var pendingCount = await _context.Applications
+                .CountAsync(a => a.Status == "Pending");
+            
+            return Ok(new { count = pendingCount });
+        }
+
+        // GET: api/applications/check-status/{studentId}
+        [HttpGet("check-status/{studentId}")]
+        [AllowAnonymous]
+        public async Task<ActionResult> CheckApplicationStatus(string studentId)
+        {
+            if (string.IsNullOrWhiteSpace(studentId))
+                return BadRequest(new { error = "Student ID is required" });
+
+            var applications = await _context.Applications
+                .Where(a => a.StudentId == studentId)
+                .OrderByDescending(a => a.CreatedAt)
+                .ToListAsync();
+
+            if (!applications.Any())
+            {
+                return Ok(new 
+                { 
+                    canApply = true, 
+                    hasApplication = false,
+                    message = "You can submit a new application."
+                });
+            }
+
+            // Get the most recent application
+            var latestApplication = applications.First();
+
+            if (latestApplication.Status == "Pending")
+            {
+                return Ok(new 
+                { 
+                    canApply = false, 
+                    hasApplication = true,
+                    status = "Pending",
+                    applicationId = latestApplication.Id,
+                    message = "Your application is already pending. Please wait for admin review."
+                });
+            }
+
+            if (latestApplication.Status == "Approved")
+            {
+                return Ok(new 
+                { 
+                    canApply = false, 
+                    hasApplication = true,
+                    status = "Approved",
+                    applicationId = latestApplication.Id,
+                    roomNo = latestApplication.RoomNo,
+                    message = "Your application has been approved."
+                });
+            }
+
+            if (latestApplication.Status == "Rejected")
+            {
+                return Ok(new 
+                { 
+                    canApply = true, 
+                    hasApplication = true,
+                    status = "Rejected",
+                    applicationId = latestApplication.Id,
+                    message = "Your previous application was rejected. You can apply again."
+                });
+            }
+
+            return Ok(new 
+            { 
+                canApply = false, 
+                hasApplication = true,
+                status = latestApplication.Status,
+                message = "Unknown application status."
+            });
+        }
+
         // POST: api/applications/create
         [HttpPost("create")]
         [AllowAnonymous]
@@ -114,20 +197,26 @@ namespace JustHallAPI.Controllers
             if (string.IsNullOrWhiteSpace(request.FullName))
                 return BadRequest(new { error = "Full name is required and cannot be empty" });
             
-            // Check for existing student IDs (excluding empty/null values)
-            var existingWithStudentId = await _context.Applications
-                .Where(a => !string.IsNullOrEmpty(a.StudentId) && a.StudentId == request.StudentId)
+            // Check for existing pending or approved applications (excluding rejected ones)
+            var existingPendingOrApproved = await _context.Applications
+                .Where(a => !string.IsNullOrEmpty(a.StudentId) && 
+                           a.StudentId == request.StudentId && 
+                           (a.Status == "Pending" || a.Status == "Approved"))
                 .ToListAsync();
             
-            Console.WriteLine($"Found {existingWithStudentId.Count} existing records with Student ID: '{request.StudentId}'");
-            foreach (var app in existingWithStudentId)
+            Console.WriteLine($"Found {existingPendingOrApproved.Count} pending/approved records with Student ID: '{request.StudentId}'");
+            foreach (var app in existingPendingOrApproved)
             {
-                Console.WriteLine($"  - ID: {app.Id}, Name: {app.FullName}, Created: {app.CreatedAt}");
+                Console.WriteLine($"  - ID: {app.Id}, Name: {app.FullName}, Status: {app.Status}, Created: {app.CreatedAt}");
             }
             
-            // Validate unique constraints
-            if (existingWithStudentId.Any())
-                return BadRequest(new { error = "An application with this student ID already exists" });
+            // Block submission if there's a pending application
+            if (existingPendingOrApproved.Any(a => a.Status == "Pending"))
+                return BadRequest(new { error = "Your application is already pending. Please wait for admin review." });
+            
+            // Block submission if there's an approved application
+            if (existingPendingOrApproved.Any(a => a.Status == "Approved"))
+                return BadRequest(new { error = "You already have an approved application." });
 
             if (await _context.Applications.AnyAsync(a => a.PaymentSlipNo == request.PaymentSlipNo))
                 return BadRequest(new { error = "An application with this payment slip number already exists" });
@@ -259,6 +348,37 @@ namespace JustHallAPI.Controllers
             return Ok(new { paymentSlipUrl = $"/media/payment_slips/{fileName}" });
         }
 
+        // POST: api/applications/upload-application-photo
+        [HttpPost("upload-application-photo")]
+        [AllowAnonymous]
+        public async Task<ActionResult> UploadApplicationPhoto([FromForm] IFormFile profile_photo)
+        {
+            if (profile_photo == null || profile_photo.Length == 0)
+                return BadRequest(new { error = "No file uploaded" });
+
+            // Validate file type
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+            var extension = Path.GetExtension(profile_photo.FileName).ToLower();
+            if (!allowedExtensions.Contains(extension))
+                return BadRequest(new { error = "Invalid file type. Only JPG and PNG are allowed." });
+
+            // Validate file size (1MB max)
+            if (profile_photo.Length > 1 * 1024 * 1024)
+                return BadRequest(new { error = "File size exceeds 1MB limit" });
+
+            var fileName = $"{Guid.NewGuid()}_{profile_photo.FileName}";
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "media", "profile_photos");
+            Directory.CreateDirectory(uploadsFolder);
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await profile_photo.CopyToAsync(stream);
+            }
+
+            return Ok(new { profilePhotoUrl = $"profile_photos/{fileName}" });
+        }
+
         // POST: api/applications/track
         [HttpPost("track")]
         [AllowAnonymous]
@@ -335,6 +455,53 @@ namespace JustHallAPI.Controllers
                 vivaDate = application.VivaDate, 
                 vivaSerialNo = application.VivaSerialNo,
                 status = application.Status 
+            });
+        }
+
+        // POST: api/applications/{id}/approve
+        [HttpPost("{id}/approve")]
+        [AllowAnonymous]
+        public async Task<ActionResult> ApproveApplication(int id)
+        {
+            var application = await _context.Applications.FindAsync(id);
+            if (application == null)
+                return NotFound(new { error = "Application not found" });
+
+            if (string.IsNullOrEmpty(application.StudentId))
+                return BadRequest(new { error = "Application has no associated student ID" });
+
+            // Update application status to Approved (seat will be assigned separately)
+            application.Status = "Approved";
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                message = "Application approved successfully. Please assign a seat.",
+                applicationId = application.Id,
+                studentId = application.StudentId,
+                fullName = application.FullName,
+                status = application.Status
+            });
+        }
+
+        // POST: api/applications/{id}/reject
+        [HttpPost("{id}/reject")]
+        [AllowAnonymous]
+        public async Task<ActionResult> RejectApplication(int id)
+        {
+            var application = await _context.Applications.FindAsync(id);
+            if (application == null)
+                return NotFound(new { error = "Application not found" });
+
+            // Update application status
+            application.Status = "Rejected";
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                message = "Application rejected successfully",
+                applicationId = application.Id,
+                status = application.Status
             });
         }
     }

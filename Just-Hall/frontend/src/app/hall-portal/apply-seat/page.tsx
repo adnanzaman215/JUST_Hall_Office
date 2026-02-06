@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { authAPI } from "@/lib/api";
+import { getStoredToken, getStoredUser } from "@/lib/auth";
 
 export default function ApplySeatPage() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export default function ApplySeatPage() {
   const [paymentSlipPreview, setPaymentSlipPreview] = useState<string | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+  const [existingProfilePhotoUrl, setExistingProfilePhotoUrl] = useState<string | null>(null);
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
@@ -30,8 +33,133 @@ export default function ApplySeatPage() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Application status states
+  const [hasApprovedApplication, setHasApprovedApplication] = useState(false);
+  const [hasPendingApplication, setHasPendingApplication] = useState(false);
+  const [hasAllocatedRoom, setHasAllocatedRoom] = useState(false);
+  const [allocatedRoomNo, setAllocatedRoomNo] = useState<string | null>(null);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [residenceStatus, setResidenceStatus] = useState<string>("non-resident");
+
+  // Check if student already has an application
+  useEffect(() => {
+    const checkExistingApplication = async () => {
+      try {
+        const user = getStoredUser();
+        if (!user || !user.student_id) return;
+
+        // Use the new check-status endpoint
+        const response = await fetch(`http://localhost:8000/api/applications/check-status/${user.student_id}`);
+        if (response.ok) {
+          const result = await response.json();
+          
+          if (result.status === 'Pending') {
+            setHasPendingApplication(true);
+            setApplicationStatus('Pending');
+          } else if (result.status === 'Approved') {
+            setHasApprovedApplication(true);
+            setApplicationStatus('Approved');
+            setAllocatedRoomNo(result.roomNo || 'TBD');
+          } else if (result.status === 'Rejected') {
+            // Student can apply again
+            setApplicationStatus('Rejected');
+            setHasPendingApplication(false);
+            setHasApprovedApplication(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking existing application:', error);
+      }
+    };
+
+    checkExistingApplication();
+  }, []);
+
+  // Pre-fill form with student profile data
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const token = getStoredToken();
+        const user = getStoredUser();
+        
+        if (!token || !user) {
+          router.push('/');
+          return;
+        }
+
+        // Fetch profile data
+        const profileData = await authAPI.getProfile(token);
+        
+        console.log('Profile data received:', profileData);
+        
+        if (profileData?.student) {
+          const student = profileData.student;
+          const userInfo = profileData.user;
+          
+          // Pre-fill personal information
+          setFullName(userInfo.fullName || "");
+          setStudentId(student.studentId || "");
+          setDepartment(student.department || "");
+          setSession(student.session || "");
+          setEmail(userInfo.email || "");
+          
+          // Pre-fill contact information
+          setMobile(student.mobileNumber || "");
+          setAddress(student.address || "");
+          setFatherName(student.fatherName || "");
+          setMotherName(student.motherName || "");
+          
+          // Pre-fill other details if available
+          if (student.dob) {
+            const dobDate = new Date(student.dob);
+            const formattedDob = dobDate.toISOString().split('T')[0];
+            setDob(formattedDob);
+          }
+          setGender(student.gender || "");
+          
+          // Set residence status
+          setResidenceStatus(student.residenceStatus || "non-resident");
+          
+          // Check if student already has a room allocated in their profile
+          if (student.roomNo) {
+            setHasAllocatedRoom(true);
+            setAllocatedRoomNo(student.roomNo.toString());
+          }
+          
+          // Set existing profile photo URL if available
+          if (student.photoUrl) {
+            setExistingProfilePhotoUrl(student.photoUrl);
+            // Also set the preview - photoUrl already includes 'profile_photos/' prefix from backend
+            const photoUrl = student.photoUrl.startsWith('/') 
+              ? `http://localhost:8000${student.photoUrl}` 
+              : `http://localhost:8000/media/${student.photoUrl}`;
+            setProfilePhotoPreview(photoUrl);
+            console.log('📸 Profile photo URL:', photoUrl);
+          }
+        } else if (profileData?.user) {
+          // If no student profile, at least pre-fill user info
+          const userInfo = profileData.user;
+          setFullName(userInfo.fullName || "");
+          setEmail(userInfo.email || "");
+          setStudentId(userInfo.studentId || "");
+          setDepartment(userInfo.department || "");
+        } else {
+          console.warn('No profile data available');
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setError('Failed to load profile data');
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [router]);
 
   // Handle payment slip file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,22 +234,29 @@ export default function ApplySeatPage() {
   // Handle form submission
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log('Form submitted!');
     setError(null);
     setSuccess(null);
 
+    console.log('Validating fields...');
+    console.log({ fullName, studentId, department, session, dob, gender, paymentSlipNo, mobile, email, address, fatherName, motherName, userId, password });
+
     if (!fullName || !studentId || !department || !session || !dob || !gender || !paymentSlipNo || !mobile || !email || !address || !fatherName || !motherName || !userId || !password) {
+      console.log('Validation failed: missing required fields');
       setError("⚠️ Please fill in all required fields.");
       return;
     }
 
     // Validate userId (alphanumeric, 4-20 characters)
     if (userId.length < 4 || userId.length > 20 || !/^[a-zA-Z0-9_]+$/.test(userId)) {
+      console.log('Validation failed: invalid userId');
       setError("⚠️ User ID must be 4-20 characters long and contain only letters, numbers, and underscores.");
       return;
     }
 
     // Validate password (minimum 6 characters)
     if (password.length < 6) {
+      console.log('Validation failed: password too short');
       setError("⚠️ Password must be at least 6 characters long.");
       return;
     }
@@ -129,19 +264,25 @@ export default function ApplySeatPage() {
     // Validate email format
     const emailPattern = /^[a-zA-Z0-9._%+-]+@student\.just\.edu\.bd$/;
     if (!emailPattern.test(email)) {
+      console.log('Validation failed: invalid email format. Email:', email);
       setError("⚠️ Email must be in the format: yourname@student.just.edu.bd");
       return;
     }
 
     if (!paymentSlipFile) {
+      console.log('Validation failed: no payment slip file');
       setError("⚠️ Please upload a payment slip image.");
       return;
     }
 
-    if (!profilePhoto) {
+    // Profile photo is required (either new upload or existing from profile)
+    if (!profilePhoto && !existingProfilePhotoUrl) {
+      console.log('Validation failed: no profile photo');
       setError("⚠️ Please upload your profile photo for verification.");
       return;
     }
+
+    console.log('All validations passed, proceeding with submission...');
 
     try {
       setLoading(true);
@@ -155,35 +296,51 @@ export default function ApplySeatPage() {
       const formData = new FormData();
       formData.append('payment_slip', paymentSlipFile);
 
+      console.log('📤 Uploading payment slip...');
       const uploadRes = await fetch('/api/upload-payment-slip', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('📨 Payment slip upload response status:', uploadRes.status);
+
       if (!uploadRes.ok) {
         const errorData = await uploadRes.json();
+        console.error('❌ Payment slip upload failed:', errorData);
         throw new Error(errorData.error || 'Failed to upload payment slip');
       }
 
       const uploadData = await uploadRes.json();
+      console.log('✅ Payment slip uploaded:', uploadData);
       const paymentSlipUrl = uploadData.paymentSlipUrl;
 
-      // Upload profile photo
-      const profileFormData = new FormData();
-      profileFormData.append('profile_photo', profilePhoto);
+      // Upload profile photo only if a new one is provided, otherwise use existing
+      let profilePhotoUrl = existingProfilePhotoUrl;
+      
+      if (profilePhoto) {
+        console.log('📤 Uploading profile photo...');
+        const profileFormData = new FormData();
+        profileFormData.append('profile_photo', profilePhoto);
 
-      const profileUploadRes = await fetch('/api/upload-application-photo', {
-        method: 'POST',
-        body: profileFormData,
-      });
+        const profileUploadRes = await fetch('/api/upload-application-photo', {
+          method: 'POST',
+          body: profileFormData,
+        });
 
-      if (!profileUploadRes.ok) {
-        const errorData = await profileUploadRes.json();
-        throw new Error(errorData.error || 'Failed to upload profile photo');
+        console.log('📨 Profile photo upload response status:', profileUploadRes.status);
+
+        if (!profileUploadRes.ok) {
+          const errorData = await profileUploadRes.json();
+          console.error('❌ Profile photo upload failed:', errorData);
+          throw new Error(errorData.error || 'Failed to upload profile photo');
+        }
+
+        const profileUploadData = await profileUploadRes.json();
+        console.log('✅ Profile photo uploaded:', profileUploadData);
+        profilePhotoUrl = profileUploadData.profilePhotoUrl;
+      } else {
+        console.log('ℹ️ Using existing profile photo:', existingProfilePhotoUrl);
       }
-
-      const profileUploadData = await profileUploadRes.json();
-      const profilePhotoUrl = profileUploadData.profilePhotoUrl;
 
       // Then, create the application with the uploaded file URLs
       const requestBody = {
@@ -208,7 +365,8 @@ export default function ApplySeatPage() {
         Password: password,
       };
       
-      console.log('Sending request body:', JSON.stringify(requestBody, null, 2));
+      console.log('📤 Submitting application to backend...');
+      console.log('📋 Request body:', JSON.stringify(requestBody, null, 2));
       
       const res = await fetch("http://localhost:8000/api/applications/create", {
         method: "POST",
@@ -216,26 +374,231 @@ export default function ApplySeatPage() {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('Response status:', res.status);
+      console.log('📨 Application submission response status:', res.status);
+      console.log('📨 Response ok:', res.ok);
       
       if (!res.ok) {
-        const errorData = await res.json();
-        console.log('Error response:', errorData);
-        throw new Error(errorData.error || "Failed to submit application");
+        const errorText = await res.text();
+        console.error('❌ Application submission failed');
+        console.error('❌ Response status:', res.status);
+        console.error('❌ Response text:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || "Failed to submit application");
+        } catch (parseError) {
+          throw new Error(`Failed to submit application: ${res.status} ${errorText}`);
+        }
       }
       
-      setSuccess("✅ Application submitted successfully! Your tracking credentials have been sent to your email.");
-      setTimeout(() => router.push("/hall-portal"), 3000);
+      const responseData = await res.json();
+      console.log('✅ Application submitted successfully:', responseData);
+      
+      // Show success message and redirect to track application page with credentials
+      setSuccess(`✅ Application submitted successfully! Save your credentials:\nUsername: ${userId}\nPassword: ${password}`);
+      setTimeout(() => router.push("/hall-portal/track-application"), 3000);
     } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+      console.error('❌ Submission error caught:', err);
+      console.error('❌ Error type:', typeof err);
+      console.error('❌ Error message:', err.message);
+      console.error('❌ Full error:', err);
+      setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
+  // Show loading state while fetching profile data
+  if (loadingProfile) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-slate-50 py-12 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading your profile data...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // If student already has a room allocated in their profile, show allocation screen
+  if (hasAllocatedRoom) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-slate-50 py-12">
+        <div className="max-w-4xl mx-auto px-5">
+          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 text-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Room Already Allocated
+            </h1>
+            <p className="text-lg text-slate-600 mb-6">
+              You already have a room allocated to you in the hall.
+            </p>
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-8">
+              <p className="text-sm text-blue-600 font-semibold mb-2">YOUR ROOM NUMBER</p>
+              <p className="text-5xl font-bold text-blue-700">{allocatedRoomNo}</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 mb-8">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Residence Status</p>
+                <p className="text-lg font-semibold text-gray-900 capitalize">{residenceStatus}</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Room Type</p>
+                <p className="text-lg font-semibold text-gray-900">Resident</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 mb-8">
+              You cannot submit a new application as you already have an allocated room. If you have any concerns or need to change your room, please contact the hall administration.
+            </p>
+            <button
+              onClick={() => router.push('/hall-portal')}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Back to Hall Portal
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // If student has a pending application, show please wait screen
+  if (hasPendingApplication) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-slate-50 py-12">
+        <div className="max-w-4xl mx-auto px-5">
+          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 text-center">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Your Application is Already Pending
+            </h1>
+            <p className="text-lg text-slate-600 mb-6">
+              You have already submitted an application. You cannot apply again until your current application is reviewed.
+            </p>
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-8">
+              <p className="text-sm text-blue-600 font-semibold mb-2">APPLICATION STATUS</p>
+              <p className="text-3xl font-bold text-blue-700">Pending Review</p>
+            </div>
+            <div className="bg-gray-50 p-6 rounded-lg mb-8">
+              <p className="text-sm text-gray-600 mb-2">What happens next?</p>
+              <ul className="text-left text-sm text-gray-700 space-y-2">
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>The administration will review your application</span>
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>You will be notified of any updates via email</span>
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>You can track your application status in the portal</span>
+                </li>
+              </ul>
+            </div>
+            <p className="text-sm text-gray-500 mb-8">
+              You cannot submit another application while your current application is being reviewed. Please be patient.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => router.push('/hall-portal/track-application')}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Track Application
+              </button>
+              <button
+                onClick={() => router.push('/hall-portal')}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Back to Portal
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // If student has an approved application, show allocation status
+  if (hasApprovedApplication) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-slate-50 py-12">
+        <div className="max-w-4xl mx-auto px-5">
+          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 text-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Seat Already Allocated
+            </h1>
+            <p className="text-lg text-slate-600 mb-6">
+              Congratulations! You have been allocated a room in the hall.
+            </p>
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-8">
+              <p className="text-sm text-blue-600 font-semibold mb-2">YOUR ROOM NUMBER</p>
+              <p className="text-5xl font-bold text-blue-700">{allocatedRoomNo}</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 mb-8">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Status</p>
+                <p className="text-lg font-semibold text-green-600">Approved</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Residence Status</p>
+                <p className="text-lg font-semibold text-gray-900 capitalize">{residenceStatus}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 mb-8">
+              You cannot submit another application as you already have an allocated room. If you have any concerns, please contact the hall administration.
+            </p>
+            <button
+              onClick={() => router.push('/hall-portal')}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Back to Hall Portal
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50 to-slate-50 py-12">
       <div className="max-w-5xl mx-auto px-5">
+        {/* Show notice if application was rejected */}
+        {applicationStatus === 'Rejected' && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  Your previous application was rejected. You can submit a new application.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <section className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
             Hall Seat Application Form
@@ -244,16 +607,17 @@ export default function ApplySeatPage() {
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Please complete all sections of the form carefully. All fields marked with <span className="text-red-500 font-semibold">*</span> are required.
           </p>
-          <div className="mt-6 inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-6 py-3 rounded-full text-sm font-medium">
+          <div className="mt-6 inline-flex items-center gap-2 bg-green-100 text-green-800 px-6 py-3 rounded-full text-sm font-medium">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            No login required - Open to all students
+            Personal information pre-filled from your profile
           </div>
         </section>
 
         <form
           onSubmit={handleSubmit}
+          noValidate
           className="bg-white p-8 md:p-10 rounded-2xl shadow-xl border border-slate-200 space-y-8"
         >
         {/* Header with Tracking Credentials and Profile Photo */}
@@ -361,6 +725,16 @@ export default function ApplySeatPage() {
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[128px]">{profilePhoto.name}</p>
                 </div>
+              ) : existingProfilePhotoUrl ? (
+                <div className="mt-2 text-center">
+                  <p className="text-xs font-semibold text-blue-600 flex items-center justify-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Pre-filled from profile
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Click to change</p>
+                </div>
               ) : (
                 <div className="mt-2 text-center">
                   <p className="text-xs text-gray-500">Required <span className="text-red-500">*</span></p>
@@ -402,82 +776,86 @@ export default function ApplySeatPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Full Name <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="text"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="Enter your full name"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Student ID <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="text"
                 value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="e.g. 210101"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Department <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="text"
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="e.g. Computer Science"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Session <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="text"
                 value={session}
-                onChange={(e) => setSession(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="e.g. 2021-2025"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Date of Birth <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="date"
                 value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Gender <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
-              <select
+              <input
+                type="text"
                 value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
+              />
             </div>
           </div>
         </div>
@@ -492,41 +870,43 @@ export default function ApplySeatPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Mobile Number <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="tel"
                 value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="e.g. 01712345678"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Email Address <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                readOnly
+                disabled
                 pattern="[a-zA-Z0-9._%+-]+@student\.just\.edu\.bd"
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="something@student.just.edu.bd"
-                title="Email must be in the format: yourname@student.just.edu.bd"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Permanent Address <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <textarea
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                readOnly
+                disabled
                 rows={3}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="Enter your complete permanent address"
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
@@ -543,13 +923,14 @@ export default function ApplySeatPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Father's Name <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="text"
                 value={fatherName}
-                onChange={(e) => setFatherName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="Enter father's name"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>
@@ -568,13 +949,14 @@ export default function ApplySeatPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Mother's Name <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs text-blue-600">(From Profile)</span>
               </label>
               <input
                 type="text"
                 value={motherName}
-                onChange={(e) => setMotherName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="Enter mother's name"
+                readOnly
+                disabled
+                className="block w-full rounded-lg border-gray-300 border px-4 py-2.5 text-sm text-gray-700 bg-gray-100 cursor-not-allowed"
                 required
               />
             </div>

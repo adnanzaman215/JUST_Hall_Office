@@ -29,6 +29,7 @@ namespace JustHallAPI.Helpers
                 StudentId = student.StudentId,
                 Department = student.Department,
                 Session = student.Session,
+                ResidenceStatus = student.ResidenceStatus,
                 RoomNo = student.RoomNo,
                 Dob = student.Dob,
                 Gender = student.Gender,

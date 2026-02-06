@@ -68,7 +68,8 @@ export default function ProfilePage() {
         data.studentId = profileData.student.studentId || "";
         data.department = profileData.student.department || "";
         data.session = profileData.student.session || "";
-        data.roomNo = profileData.student.roomNo;
+        data.residenceStatus = profileData.student.residenceStatus || "non-resident";
+        data.roomNo = profileData.student.roomNo; // Only for display if resident
         data.dob = formatDateForInput(profileData.student.dob);
         data.gender = profileData.student.gender || "";
         data.bloodGroup = profileData.student.bloodGroup || "";

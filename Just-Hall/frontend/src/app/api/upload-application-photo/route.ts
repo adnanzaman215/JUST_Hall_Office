@@ -1,52 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
-import { mkdir } from 'fs/promises';
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('profile_photo') as File;
     
-    if (!file) {
+    // Forward the request to .NET backend
+    const response = await fetch('http://localhost:8000/api/applications/upload-application-photo', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
       return NextResponse.json(
-        { error: 'No file uploaded' },
-        { status: 400 }
+        { error: errorData.error || 'Upload failed' },
+        { status: response.status }
       );
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Only JPG and PNG are allowed.' },
-        { status: 400 }
-      );
-    }
-
-    // Validate file size (1MB max)
-    if (file.size > 1 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: 'File size must be less than 1MB' },
-        { status: 400 }
-      );
-    }
-
-    // Create unique filename
-    const timestamp = Date.now();
-    const filename = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    
-    // Define upload directory (relative to project root)
-    const uploadDir = join(process.cwd(), '..', 'backend', 'media', 'profile_photos');
-    
-    // Create directory if it doesn't exist
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (error) {
-      console.error('Error creating directory:', error);
-    }
-    
-    // Convert file to buffer and save
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Upload application photo API route error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     

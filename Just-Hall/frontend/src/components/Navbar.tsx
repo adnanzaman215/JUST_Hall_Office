@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useUI } from "@/context/ui-store";
 import { useAuth } from "@/context/auth-context";
 import { getFullMediaUrl } from "@/lib/utils";
+import AdminNotificationBell from "./AdminNotificationBell";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -51,6 +52,11 @@ export default function Navbar() {
 
           {/* Right Section: Auth Buttons/Profile & Mobile Menu */}
           <div className="flex items-center gap-3">
+            {/* Admin Notification Bell - Only show for admin users */}
+            {isAuthenticated && user?.role === 'admin' && (
+              <AdminNotificationBell />
+            )}
+            
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}

@@ -22,7 +22,6 @@ export default function StudentProfileForm({
   const [studentId, setStudentId] = useState(initialData.studentId || "");
   const [department, setDepartment] = useState(initialData.department || "");
   const [session, setSession] = useState(initialData.session || "");
-  const [roomNo, setRoomNo] = useState(initialData.roomNo?.toString() || "");
   const [dob, setDob] = useState(initialData.dob || "");
   const [gender, setGender] = useState(initialData.gender || "");
   const [bloodGroup, setBloodGroup] = useState(initialData.bloodGroup || "");
@@ -43,18 +42,11 @@ export default function StudentProfileForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate room number
-    const roomNumber = parseInt(roomNo);
-    if (isNaN(roomNumber) || roomNumber <= 0) {
-      return;
-    }
-
     const formData = new FormData();
     // Backend expects these exact field names from CompleteProfileRequest
     formData.append('studentId', studentId);
     formData.append('department', department);
     formData.append('session', session);
-    formData.append('roomNo', roomNo);
     formData.append('dob', dob);
     formData.append('gender', gender);
     formData.append('bloodGroup', bloodGroup || '');
@@ -164,23 +156,6 @@ export default function StudentProfileForm({
 
         <div className="flex flex-col sm:flex-row sm:gap-4">
           <div className="flex flex-col w-full">
-            <label className="block text-sm font-medium text-slate-700">Room No *</label>
-            <input
-              type="number"
-              min="1"
-              value={roomNo}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '' || parseInt(value) > 0) {
-                  setRoomNo(value);
-                }
-              }}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
-              placeholder="e.g., 101"
-              required
-            />
-          </div>
-          <div className="flex flex-col w-full">
             <label className="block text-sm font-medium text-slate-700">Date of Birth *</label>
             <input
               type="date"
@@ -189,6 +164,9 @@ export default function StudentProfileForm({
               className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
               required
             />
+          </div>
+          <div className="flex flex-col w-full">
+            {/* Placeholder for layout balance */}
           </div>
         </div>
 

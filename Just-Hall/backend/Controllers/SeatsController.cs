@@ -23,162 +23,223 @@ namespace JustHallAPI.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<object>>> GetApprovedApplicantsWithoutSeats()
         {
-            // Get all approved applications that don't have a seat assigned
-            var assignedApplicationIds = await _context.SeatAllocations
-                .Select(s => s.ApplicationId)
+            // Get all approved applications where student doesn't have a room allocated
+            var approvedApps = await _context.Applications
+                .Where(a => a.Status == "Approved")
                 .ToListAsync();
 
-            var applicants = await _context.Applications
-                .Where(a => a.Status == "Approved" && !assignedApplicationIds.Contains(a.Id))
-                .Select(a => new
+            var result = new List<object>();
+            foreach (var app in approvedApps)
+            {
+                if (int.TryParse(app.UserId, out int userId))
                 {
-                    a.Id,
-                    a.FullName,
-                    a.StudentId,
-                    a.Department,
-                    a.Session,
-                    a.ProfilePhotoUrl,
-                    a.Email,
-                    a.Mobile
-                })
-                .ToListAsync();
+                    var hasRoom = await _context.Students
+                        .AnyAsync(s => s.UserId == userId && s.RoomNo != null);
+                    
+                    if (!hasRoom)
+                    {
+                        result.Add(new
+                        {
+                            app.Id,
+                            app.FullName,
+                            app.StudentId,
+                            app.Department,
+                            app.Session,
+                            app.ProfilePhotoUrl,
+                            app.Email,
+                            app.Mobile
+                        });
+                    }
+                }
+            }
 
-            return Ok(applicants);
+            return Ok(result);
         }
 
         // GET: api/seats/floor/{floorNumber}
         [HttpGet("floor/{floorNumber}")]
         [AllowAnonymous]
-        public async Task<ActionResult<FloorMapDto>> GetFloorMap(int floorNumber)
+        public async Task<ActionResult<object>> GetFloorMap(int floorNumber)
         {
-            var floorAllocations = await _context.SeatAllocations
-                .Include(s => s.Application)
-                .Where(s => s.FloorNumber == floorNumber)
+            // Get all students with room allocations for this floor
+            var allocatedStudents = await _context.Students
+                .Include(s => s.User)
+                .Where(s => s.RoomNo != null && s.RoomNo.StartsWith(floorNumber.ToString()))
                 .ToListAsync();
 
-            var rooms = new List<RoomInfoDto>();
-
-            // Generate info for all 28 rooms
-            for (int roomNumber = 1; roomNumber <= 28; roomNumber++)
+            var rooms = new List<object>();
+            
+            // Each floor has 30 rooms (e.g., Floor 2: 201-230)
+            for (int roomNum = 1; roomNum <= 30; roomNum++)
             {
-                var roomAllocations = floorAllocations
-                    .Where(s => s.RoomNumber == roomNumber)
-                    .Select(s => new SeatAllocationDto
-                    {
-                        Id = s.Id,
-                        FloorNumber = s.FloorNumber,
-                        RoomNumber = s.RoomNumber,
-                        SeatNumber = s.SeatNumber,
-                        ApplicationId = s.ApplicationId,
-                        StudentName = s.Application?.FullName,
-                        StudentId = s.Application?.StudentId,
-                        Department = s.Application?.Department,
-                        ProfilePhotoUrl = s.Application?.ProfilePhotoUrl,
-                        AssignedAt = s.AssignedAt
-                    })
+                var roomNumber = (floorNumber * 100) + roomNum; // e.g., 201, 202, etc.
+                var roomNumberStr = roomNumber.ToString();
+                
+                // Filter students whose room designation starts with this room number
+                var roomStudents = allocatedStudents
+                    .Where(s => s.RoomNo != null && s.RoomNo.StartsWith(roomNumberStr))
                     .ToList();
-
-                rooms.Add(new RoomInfoDto
+                
+                // Create seat map based on actual seat assignments
+                var seats = new List<object>();
+                var seatDesignations = new[] { "B1", "B2", "C1", "C2" };
+                var seatTypes = new[] { "Balcony", "Balcony", "Corridor", "Corridor" };
+                
+                for (int i = 0; i < 4; i++)
                 {
-                    FloorNumber = floorNumber,
+                    var fullSeatId = $"{roomNumber}{seatDesignations[i]}";
+                    var student = roomStudents.FirstOrDefault(s => s.RoomNo == fullSeatId);
+                    seats.Add(CreateSeatInfo(fullSeatId, roomNumber, seatTypes[i], i + 1, student));
+                }
+
+                rooms.Add(new
+                {
                     RoomNumber = roomNumber,
-                    OccupiedSeats = roomAllocations.Count,
-                    AvailableSeats = 4 - roomAllocations.Count,
-                    Allocations = roomAllocations
+                    Floor = floorNumber,
+                    TotalSeats = 4,
+                    AllocatedSeats = roomStudents.Count,
+                    AvailableSeats = 4 - roomStudents.Count,
+                    Seats = seats
                 });
             }
 
-            var floorMap = new FloorMapDto
+            var totalAllocated = allocatedStudents.Count;
+            
+            return Ok(new
             {
-                FloorNumber = floorNumber,
-                TotalRooms = 28,
-                OccupiedRooms = rooms.Count(r => r.OccupiedSeats > 0),
-                TotalSeats = 112,
-                OccupiedSeats = floorAllocations.Count,
+                Floor = floorNumber,
+                TotalRooms = 30,
+                TotalSeats = 120, // 30 rooms * 4 seats
+                AllocatedSeats = totalAllocated,
+                AvailableSeats = 120 - totalAllocated,
                 Rooms = rooms
-            };
+            });
+        }
 
-            return Ok(floorMap);
+        private object CreateSeatInfo(string seatId, int roomNumber, string seatType, int seatNumber, Student? student)
+        {
+            if (student != null)
+            {
+                return new
+                {
+                    SeatId = seatId,
+                    RoomNumber = roomNumber,
+                    SeatType = seatType,
+                    SeatNumber = seatNumber,
+                    IsAllocated = true,
+                    StudentName = student.User?.FullName ?? "",
+                    StudentId = student.StudentId,
+                    Department = student.Department,
+                    Session = student.Session,
+                    PhotoUrl = student.PhotoUrl,
+                    Email = student.User?.Email ?? "",
+                    Mobile = student.MobileNumber
+                };
+            }
+            
+            return new
+            {
+                SeatId = seatId,
+                RoomNumber = roomNumber,
+                SeatType = seatType,
+                SeatNumber = seatNumber,
+                IsAllocated = false,
+                StudentName = "",
+                StudentId = "",
+                Department = "",
+                Session = "",
+                PhotoUrl = "",
+                Email = "",
+                Mobile = ""
+            };
         }
 
         // POST: api/seats/assign
         [HttpPost("assign")]
         [AllowAnonymous]
-        public async Task<ActionResult<SeatAllocationDto>> AssignSeat(AssignSeatRequest request)
+        public async Task<ActionResult> AssignSeat(AssignSeatRequest request)
         {
-            // Validate seat number
-            if (request.SeatNumber < 1 || request.SeatNumber > 4)
-            {
-                return BadRequest("Seat number must be between 1 and 4");
-            }
+            // Find the application
+            var application = await _context.Applications
+                .FirstOrDefaultAsync(a => a.Id == request.ApplicationId);
 
-            // Validate room number
-            if (request.RoomNumber < 1 || request.RoomNumber > 28)
-            {
-                return BadRequest("Room number must be between 1 and 28");
-            }
-
-            // Check if application exists and is approved
-            var application = await _context.Applications.FindAsync(request.ApplicationId);
             if (application == null)
-            {
-                return NotFound("Application not found");
-            }
+                return NotFound(new { error = "Application not found" });
 
             if (application.Status != "Approved")
-            {
-                return BadRequest("Application must be approved before seat assignment");
-            }
+                return BadRequest(new { error = "Application must be approved before seat assignment" });
 
-            // Check if student already has a seat
-            var existingAllocation = await _context.SeatAllocations
-                .FirstOrDefaultAsync(s => s.ApplicationId == request.ApplicationId);
+            if (string.IsNullOrEmpty(application.StudentId))
+                return BadRequest(new { error = "Application has no student ID" });
+
+            // Find the student profile using StudentId
+            var student = await _context.Students
+                .FirstOrDefaultAsync(s => s.StudentId == application.StudentId);
+
+            if (student == null)
+                return NotFound(new { error = $"Student profile not found for student ID: {application.StudentId}" });
+
+            // Check if student already has a room
+            if (student.RoomNo != null)
+                return BadRequest(new { error = $"Student already has room {student.RoomNo} allocated" });
+
+            // Get all applications for this room to find occupied seats
+            // Check both applications table (which stores full seat designations like "230B1")
+            var roomNumberStr = request.RoomNumber.ToString();
+            var applicationsInRoom = await _context.Applications
+                .Where(a => a.Status == "Approved" && 
+                           !string.IsNullOrEmpty(a.RoomNo) && 
+                           a.RoomNo.StartsWith(roomNumberStr))
+                .ToListAsync();
+
+            if (applicationsInRoom.Count >= 4)
+                return BadRequest(new { error = "Room is full (maximum 4 students per room)" });
+
+            // Define seat designations in order: B1, B2, C1, C2
+            var seatDesignations = new[] { "B1", "B2", "C1", "C2" };
             
-            if (existingAllocation != null)
+            // Find which seats are already occupied by parsing application.RoomNo
+            var occupiedSeats = new HashSet<string>();
+            foreach (var app in applicationsInRoom)
             {
-                return BadRequest($"Student already has a seat: Floor {existingAllocation.FloorNumber}, Room {existingAllocation.RoomNumber}, Seat {existingAllocation.SeatNumber}");
+                // Extract seat designation from room number (e.g., "230B1" -> "B1")
+                if (app.RoomNo.Length > roomNumberStr.Length)
+                {
+                    var seatPart = app.RoomNo.Substring(roomNumberStr.Length);
+                    occupiedSeats.Add(seatPart);
+                }
             }
 
-            // Check if seat is already occupied
-            var seatOccupied = await _context.SeatAllocations
-                .AnyAsync(s => s.FloorNumber == request.FloorNumber 
-                    && s.RoomNumber == request.RoomNumber 
-                    && s.SeatNumber == request.SeatNumber);
-
-            if (seatOccupied)
+            // Find the first available seat
+            string assignedSeat = null;
+            foreach (var seat in seatDesignations)
             {
-                return BadRequest("This seat is already occupied");
+                if (!occupiedSeats.Contains(seat))
+                {
+                    assignedSeat = seat;
+                    break;
+                }
             }
 
-            // Create seat allocation
-            var allocation = new SeatAllocation
-            {
-                FloorNumber = request.FloorNumber,
-                RoomNumber = request.RoomNumber,
-                SeatNumber = request.SeatNumber,
-                ApplicationId = request.ApplicationId,
-                AssignedAt = DateTime.UtcNow
-            };
+            if (assignedSeat == null)
+                return BadRequest(new { error = "No available seats in this room" });
 
-            _context.SeatAllocations.Add(allocation);
+            // Create the full room designation with seat (e.g., "230B1")
+            var fullRoomDesignation = $"{request.RoomNumber}{assignedSeat}";
+
+            // Allocate the seat - store full designation in both tables
+            student.RoomNo = fullRoomDesignation; // Store full designation like "230B1"
+            student.ResidenceStatus = "resident";
+            application.RoomNo = fullRoomDesignation; // Store full designation with seat
+
             await _context.SaveChangesAsync();
 
-            // Return the allocation with student info
-            var result = new SeatAllocationDto
-            {
-                Id = allocation.Id,
-                FloorNumber = allocation.FloorNumber,
-                RoomNumber = allocation.RoomNumber,
-                SeatNumber = allocation.SeatNumber,
-                ApplicationId = allocation.ApplicationId,
-                StudentName = application.FullName,
-                StudentId = application.StudentId,
-                Department = application.Department,
-                ProfilePhotoUrl = application.ProfilePhotoUrl,
-                AssignedAt = allocation.AssignedAt
-            };
-
-            return CreatedAtAction(nameof(GetAllocation), new { id = allocation.Id }, result);
+            return Ok(new { 
+                message = "Seat allocated successfully", 
+                roomNo = request.RoomNumber,
+                seatDesignation = fullRoomDesignation,
+                seat = assignedSeat
+            });
         }
 
         // GET: api/seats/{id}

@@ -316,6 +316,7 @@ namespace JustHallAPI.Controllers
                         StudentId = user.Student.StudentId,
                         Department = user.Student.Department,
                         Session = user.Student.Session,
+                        ResidenceStatus = user.Student.ResidenceStatus,
                         RoomNo = user.Student.RoomNo,
                         Dob = user.Student.Dob,
                         Gender = user.Student.Gender,
@@ -429,7 +430,6 @@ namespace JustHallAPI.Controllers
                     if (!string.IsNullOrEmpty(request.StudentId)) student.StudentId = request.StudentId;
                     if (!string.IsNullOrEmpty(request.Department)) student.Department = request.Department;
                     if (!string.IsNullOrEmpty(request.Session)) student.Session = request.Session;
-                    if (request.RoomNo.HasValue) student.RoomNo = request.RoomNo.Value;
                     if (request.Dob.HasValue) student.Dob = request.Dob;
                     if (!string.IsNullOrEmpty(request.Gender)) student.Gender = request.Gender;
                     if (!string.IsNullOrEmpty(request.BloodGroup)) student.BloodGroup = request.BloodGroup;
@@ -458,14 +458,15 @@ namespace JustHallAPI.Controllers
                 }
                 else
                 {
-                    // Create new profile
+                    // Create new profile - all new students are non-resident
                     student = new Student
                     {
                         UserId = user.Id,
                         StudentId = request.StudentId,
                         Department = request.Department,
                         Session = request.Session,
-                        RoomNo = request.RoomNo ?? 0,
+                        ResidenceStatus = "non-resident",
+                        RoomNo = null,
                         Dob = request.Dob,
                         Gender = request.Gender,
                         BloodGroup = request.BloodGroup,
@@ -745,7 +746,6 @@ namespace JustHallAPI.Controllers
             if (!string.IsNullOrEmpty(request.StudentId)) student.StudentId = request.StudentId;
             if (!string.IsNullOrEmpty(request.Department)) student.Department = request.Department;
             if (!string.IsNullOrEmpty(request.Session)) student.Session = request.Session;
-            if (request.RoomNo.HasValue) student.RoomNo = request.RoomNo.Value;
             if (request.Dob.HasValue) student.Dob = request.Dob;
             if (!string.IsNullOrEmpty(request.Gender)) student.Gender = request.Gender;
             if (!string.IsNullOrEmpty(request.BloodGroup)) student.BloodGroup = request.BloodGroup;
@@ -773,6 +773,7 @@ namespace JustHallAPI.Controllers
                     StudentId = student.StudentId,
                     Department = student.Department,
                     Session = student.Session,
+                    ResidenceStatus = student.ResidenceStatus,
                     RoomNo = student.RoomNo,
                     Dob = student.Dob,
                     Gender = student.Gender,
@@ -844,7 +845,6 @@ namespace JustHallAPI.Controllers
             if (!string.IsNullOrEmpty(request.StudentId)) student.StudentId = request.StudentId;
             if (!string.IsNullOrEmpty(request.Department)) student.Department = request.Department;
             if (!string.IsNullOrEmpty(request.Session)) student.Session = request.Session;
-            if (request.RoomNo.HasValue) student.RoomNo = request.RoomNo.Value;
             if (request.Dob.HasValue) student.Dob = request.Dob;
             if (!string.IsNullOrEmpty(request.Gender)) student.Gender = request.Gender;
             if (!string.IsNullOrEmpty(request.BloodGroup)) student.BloodGroup = request.BloodGroup;
@@ -865,6 +865,7 @@ namespace JustHallAPI.Controllers
                     StudentId = student.StudentId,
                     Department = student.Department,
                     Session = student.Session,
+                    ResidenceStatus = student.ResidenceStatus,
                     RoomNo = student.RoomNo,
                     Dob = student.Dob,
                     Gender = student.Gender,

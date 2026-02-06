@@ -5,7 +5,8 @@ namespace JustHallAPI.DTOs
         public string StudentId { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
         public string Session { get; set; } = string.Empty;
-        public int RoomNo { get; set; }
+        public string ResidenceStatus { get; set; } = "non-resident";
+        public string? RoomNo { get; set; }
         public DateTime? Dob { get; set; }
         public string Gender { get; set; } = string.Empty;
         public string BloodGroup { get; set; } = string.Empty;
@@ -49,7 +50,6 @@ namespace JustHallAPI.DTOs
         public string StudentId { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
         public string Session { get; set; } = string.Empty;
-        public int? RoomNo { get; set; }
         public DateTime? Dob { get; set; }
         public string Gender { get; set; } = string.Empty;
         public string BloodGroup { get; set; } = string.Empty;
