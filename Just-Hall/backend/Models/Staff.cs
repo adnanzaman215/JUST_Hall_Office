@@ -20,6 +20,10 @@ namespace JustHallAPI.Models
         [Column("employee_id")]
         public string EmployeeId { get; set; } = string.Empty;
 
+        [MaxLength(50)]
+        [Column("staff_type")]
+        public string StaffType { get; set; } = string.Empty;
+
         [MaxLength(100)]
         [Column("designation")]
         public string Designation { get; set; } = string.Empty;
@@ -27,6 +31,10 @@ namespace JustHallAPI.Models
         [MaxLength(100)]
         [Column("department")]
         public string Department { get; set; } = string.Empty;
+
+        [MaxLength(20)]
+        [Column("status")]
+        public string Status { get; set; } = "Active";
 
         [Column("joining_date")]
         public DateTime? JoiningDate { get; set; }
@@ -63,7 +71,6 @@ namespace JustHallAPI.Models
 
         // Navigation property
         [ForeignKey("UserId")]
-        [JsonIgnore]
         public virtual User? User { get; set; }
     }
 }

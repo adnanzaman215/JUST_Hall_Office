@@ -3,6 +3,7 @@ using System;
 using JustHallAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JustHallAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260207162236_AddStaffTypeAndStatus")]
+    partial class AddStaffTypeAndStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -574,58 +577,6 @@ namespace JustHallAPI.Migrations
                     b.ToTable("users_staff", (string)null);
                 });
 
-            modelBuilder.Entity("JustHallAPI.Models.StaffRoleRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Remarks")
-                        .HasColumnType("longtext")
-                        .HasColumnName("remarks");
-
-                    b.Property<DateTime>("RequestedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("requested_at");
-
-                    b.Property<string>("RequestedRole")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("requested_role");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("reviewed_at");
-
-                    b.Property<int?>("ReviewedBy")
-                        .HasColumnType("int")
-                        .HasColumnName("reviewed_by");
-
-                    b.Property<int>("StaffId")
-                        .HasColumnType("int")
-                        .HasColumnName("staff_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)")
-                        .HasColumnName("status");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RequestedAt");
-
-                    b.HasIndex("ReviewedBy");
-
-                    b.HasIndex("StaffId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("staff_role_requests", (string)null);
-                });
-
             modelBuilder.Entity("JustHallAPI.Models.Student", b =>
                 {
                     b.Property<int>("Id")
@@ -877,24 +828,6 @@ namespace JustHallAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("JustHallAPI.Models.StaffRoleRequest", b =>
-                {
-                    b.HasOne("JustHallAPI.Models.User", "Reviewer")
-                        .WithMany()
-                        .HasForeignKey("ReviewedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("JustHallAPI.Models.Staff", "Staff")
-                        .WithMany()
-                        .HasForeignKey("StaffId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Reviewer");
-
-                    b.Navigation("Staff");
                 });
 
             modelBuilder.Entity("JustHallAPI.Models.Student", b =>

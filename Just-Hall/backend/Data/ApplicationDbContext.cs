@@ -16,9 +16,11 @@ namespace JustHallAPI.Data
         public DbSet<Admin> Admins { get; set; }
         public DbSet<Application> Applications { get; set; }
         public DbSet<Notice> Notices { get; set; }
+        public DbSet<NoticeAuditLog> NoticeAuditLogs { get; set; }
         public DbSet<SeatAllocation> SeatAllocations { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<StaffRoleRequest> StaffRoleRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -88,6 +90,14 @@ namespace JustHallAPI.Data
                 entity.HasKey(e => e.Id);
             });
 
+            modelBuilder.Entity<NoticeAuditLog>(entity =>
+            {
+                entity.ToTable("notices_audit_logs");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.NoticeId);
+                entity.HasIndex(e => e.PerformedAt);
+            });
+
             // Payment configuration
             modelBuilder.Entity<Payment>(entity =>
             {
@@ -125,6 +135,26 @@ namespace JustHallAPI.Data
                 entity.HasOne(a => a.RespondedBy)
                     .WithMany()
                     .HasForeignKey(a => a.RespondedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // StaffRoleRequest configuration
+            modelBuilder.Entity<StaffRoleRequest>(entity =>
+            {
+                entity.ToTable("staff_role_requests");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.StaffId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.RequestedAt);
+                
+                entity.HasOne(r => r.Staff)
+                    .WithMany()
+                    .HasForeignKey(r => r.StaffId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                entity.HasOne(r => r.Reviewer)
+                    .WithMany()
+                    .HasForeignKey(r => r.ReviewedBy)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

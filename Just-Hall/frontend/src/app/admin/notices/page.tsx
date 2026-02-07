@@ -17,9 +17,11 @@ const categories = [
 // Helper function to get full file URL
 const getFileUrl = (url: string | null | undefined) => {
   if (!url) return "";
-  if (url.startsWith("http")) return url; // Already full URL
-  return `${BACKEND_URL}${url}`; // Prepend backend URL
+  if (url.startsWith("http")) return url;
+  return `${BACKEND_URL}${url}`;
 };
+
+type NoticeStatus = "PendingReview" | "Published" | "Rejected";
 
 export default function AdminNoticeManagement() {
   const router = useRouter();
@@ -27,11 +29,14 @@ export default function AdminNoticeManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewingNotice, setReviewingNotice] = useState<Notice | null>(null);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<"All" | NoticeStatus>("All");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -42,6 +47,13 @@ export default function AdminNoticeManagement() {
     pinned: false,
     attachmentUrl: "",
     expiresAt: "",
+    publishNow: false,
+  });
+
+  // Review form state
+  const [reviewData, setReviewData] = useState({
+    status: "Published" as "Published" | "Rejected",
+    remarks: "",
   });
 
   useEffect(() => {
@@ -57,7 +69,13 @@ export default function AdminNoticeManagement() {
     try {
       setLoading(true);
       setError(null);
-      const data = await noticesAPI.getNotices();
+      const token = getStoredToken();
+      if (!token) {
+        setError("Authentication required");
+        return;
+      }
+      // Use admin endpoint to get all notices with workflow data
+      const data = await noticesAPI.getAllNotices(token);
       setNotices(data);
     } catch (err) {
       setError("Failed to load notices");
@@ -66,6 +84,10 @@ export default function AdminNoticeManagement() {
       setLoading(false);
     }
   };
+
+  const filteredNotices = statusFilter === "All" 
+    ? notices 
+    : notices.filter(n => n.status === statusFilter);
 
   const handleOpenModal = (notice?: Notice) => {
     if (notice) {
@@ -78,6 +100,7 @@ export default function AdminNoticeManagement() {
         pinned: notice.pinned,
         attachmentUrl: notice.attachmentUrl || "",
         expiresAt: notice.expiresAt ? notice.expiresAt.split("T")[0] : "",
+        publishNow: false,
       });
       setUploadedFileName(notice.attachmentUrl ? notice.attachmentUrl.split("/").pop() || "" : "");
     } else {
@@ -91,6 +114,7 @@ export default function AdminNoticeManagement() {
         pinned: false,
         attachmentUrl: "",
         expiresAt: "",
+        publishNow: true, // Admin can publish directly by default
       });
       setUploadedFileName("");
     }
@@ -104,6 +128,48 @@ export default function AdminNoticeManagement() {
     setSelectedFile(null);
     setUploadedFileName("");
     setError(null);
+  };
+
+  const handleOpenReviewModal = (notice: Notice) => {
+    setReviewingNotice(notice);
+    setReviewData({ status: "Published", remarks: "" });
+    setShowReviewModal(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setShowReviewModal(false);
+    setReviewingNotice(null);
+    setReviewData({ action: "publish", remarks: "" });
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewingNotice) return;
+    
+    const token = getStoredToken();
+    if (!token) {
+      setError("Authentication required");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      await noticesAPI.reviewNotice(
+        reviewingNotice.id,
+        {
+          status: reviewData.status,
+          remarks: reviewData.remarks || undefined,
+        },
+        token
+      );
+      await fetchNotices();
+      handleCloseReviewModal();
+    } catch (err: any) {
+      setError(err.message || "Failed to review notice");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,7 +207,7 @@ export default function AdminNoticeManagement() {
         }
       }
 
-      const noticeData: CreateNoticeRequest | UpdateNoticeRequest = {
+      const noticeData: any = {
         title: formData.title,
         body: formData.body,
         category: formData.category,
@@ -150,6 +216,11 @@ export default function AdminNoticeManagement() {
         attachmentUrl: attachmentUrl || undefined,
         expiresAt: formData.expiresAt || undefined,
       };
+
+      if (!editingNotice) {
+        // Only include publishNow when creating
+        noticeData.publishNow = formData.publishNow;
+      }
 
       if (editingNotice) {
         await noticesAPI.updateNotice(editingNotice.id, noticeData, token);
@@ -195,14 +266,14 @@ export default function AdminNoticeManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-white py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
-          <div className="flex justify-between items-center">
+        <div className="bg-white rounded-lg border border-gray-200 mb-6 p-6">
+          <div className="flex justify-between items-center mb-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Notice Management</h1>
-              <p className="text-gray-600 mt-1">Create, edit, and manage hall notices</p>
+              <p className="text-gray-600 mt-1">Review, publish, and manage hall notices</p>
             </div>
             <button
               onClick={() => handleOpenModal()}
@@ -214,6 +285,25 @@ export default function AdminNoticeManagement() {
               Create Notice
             </button>
           </div>
+
+          {/* Status Filter Tabs */}
+          <div className="flex gap-2 border-t border-gray-200 pt-4">
+            {(["All", "PendingReview", "Published", "Rejected"] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                  statusFilter === status
+                    ? "bg-cyan-600 text-white"
+                    : "bg-slate-50 text-gray-700 hover:bg-slate-100 border border-gray-200"
+                }`}
+              >
+                {status === "PendingReview" ? "Pending Review" : status}
+                {status === "All" && ` (${notices.length})`}
+                {status !== "All" && ` (${notices.filter(n => n.status === status).length})`}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Error Display */}
@@ -224,10 +314,10 @@ export default function AdminNoticeManagement() {
         )}
 
         {/* Notices Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-slate-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Title
@@ -236,16 +326,16 @@ export default function AdminNoticeManagement() {
                     Category
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Author
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Attachment
+                    Created By
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    Submitted
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Reviewed By
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -255,88 +345,99 @@ export default function AdminNoticeManagement() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
+                    <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600 mx-auto"></div>
                     </td>
                   </tr>
-                ) : notices.length === 0 ? (
+                ) : filteredNotices.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                      No notices found. Create your first notice!
+                      No notices found in this category.
                     </td>
                   </tr>
                 ) : (
-                  notices.map((notice) => (
+                  filteredNotices.map((notice) => (
                     <tr key={notice.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
-                        <div className="text-sm font-bold text-black">{notice.title}</div>
-                        <div className="text-sm text-black font-medium line-clamp-1">{notice.body}</div>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="text-sm font-bold text-black flex items-center gap-2">
+                              {notice.title}
+                              {notice.pinned && <span className="text-yellow-500">📌</span>}
+                            </div>
+                            <div className="text-sm text-gray-500 line-clamp-1">{notice.body}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                           {notice.category}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {notice.author}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {notice.createdByName || notice.author}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {notice.attachmentUrl ? (
-                          <a
-                            href={getFileUrl(notice.attachmentUrl)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 hover:bg-green-200"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            File
-                          </a>
-                        ) : (
-                          <span className="text-gray-400 text-xs">No file</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {notice.pinned && (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            📌 Pinned
-                          </span>
-                        )}
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            notice.status === "Published"
+                              ? "bg-green-100 text-green-800"
+                              : notice.status === "PendingReview"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {notice.status === "PendingReview" ? "Pending Review" : notice.status}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(notice.createdAt)}
+                        {notice.submittedAt ? formatDate(notice.submittedAt) : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {notice.reviewedByName || "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleOpenModal(notice)}
-                          className="text-cyan-600 hover:text-cyan-900 mr-4"
-                        >
-                          Edit
-                        </button>
-                        {deleteConfirmId === notice.id ? (
-                          <div className="inline-flex gap-2">
+                        <div className="flex items-center justify-end gap-2">
+                          {notice.status === "PendingReview" && (
                             <button
-                              onClick={() => handleDelete(notice.id)}
+                              onClick={() => handleOpenReviewModal(notice)}
+                              className="text-cyan-600 hover:text-cyan-900 font-medium"
+                            >
+                              Review
+                            </button>
+                          )}
+                          {notice.status !== "PendingReview" && (
+                            <button
+                              onClick={() => handleOpenModal(notice)}
+                              className="text-cyan-600 hover:text-cyan-900"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {deleteConfirmId === notice.id ? (
+                            <div className="inline-flex gap-2">
+                              <button
+                                onClick={() => handleDelete(notice.id)}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="text-gray-600 hover:text-gray-900"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirmId(notice.id)}
                               className="text-red-600 hover:text-red-900"
                             >
-                              Confirm
+                              Delete
                             </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="text-gray-600 hover:text-gray-900"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirmId(notice.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -468,17 +569,33 @@ export default function AdminNoticeManagement() {
                     />
                   </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="pinned"
-                      checked={formData.pinned}
-                      onChange={(e) => setFormData({ ...formData, pinned: e.target.checked })}
-                      className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
-                    />
-                    <label htmlFor="pinned" className="ml-2 block text-sm font-bold text-gray-900">
-                      Pin this notice to the top
-                    </label>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="pinned"
+                        checked={formData.pinned}
+                        onChange={(e) => setFormData({ ...formData, pinned: e.target.checked })}
+                        className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+                      />
+                      <label htmlFor="pinned" className="ml-2 block text-sm font-bold text-gray-900">
+                        Pin to top
+                      </label>
+                    </div>
+                    {!editingNotice && (
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="publishNow"
+                          checked={formData.publishNow}
+                          onChange={(e) => setFormData({ ...formData, publishNow: e.target.checked })}
+                          className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                        />
+                        <label htmlFor="publishNow" className="ml-2 block text-sm font-bold text-gray-900">
+                          Publish immediately (bypass review)
+                        </label>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-3 pt-4">
@@ -506,6 +623,114 @@ export default function AdminNoticeManagement() {
                     <button
                       type="button"
                       onClick={handleCloseModal}
+                      className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Review Modal */}
+        {showReviewModal && reviewingNotice && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Review Notice</h2>
+                  <button
+                    onClick={handleCloseReviewModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Notice Details */}
+                <div className="bg-slate-50 rounded-lg p-4 mb-6 border border-gray-200">
+                  <h3 className="font-bold text-lg text-gray-900 mb-2">{reviewingNotice.title}</h3>
+                  <p className="text-gray-700 mb-3">{reviewingNotice.body}</p>
+                  <div className="flex flex-wrap gap-2 text-sm">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-semibold">
+                      {reviewingNotice.category}
+                    </span>
+                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+                      By: {reviewingNotice.createdByName || reviewingNotice.author}
+                    </span>
+                    {reviewingNotice.submittedAt && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+                        Submitted: {formatDate(reviewingNotice.submittedAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Review Form */}
+                <form onSubmit={handleReviewSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-2">
+                      Decision *
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="Published"
+                          checked={reviewData.status === "Published"}
+                          onChange={(e) => setReviewData({ ...reviewData, status: "Published" })}
+                          className="w-4 h-4 text-green-600 focus:ring-green-500"
+                        />
+                        <span className="ml-2 text-gray-900 font-medium">✓ Publish</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="Rejected"
+                          checked={reviewData.status === "Rejected"}
+                          onChange={(e) => setReviewData({ ...reviewData, status: "Rejected" })}
+                          className="w-4 h-4 text-red-600 focus:ring-red-500"
+                        />
+                        <span className="ml-2 text-gray-900 font-medium">✗ Reject</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-1">
+                      Remarks {reviewData.status === "Rejected" && "*"}
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={reviewData.remarks}
+                      onChange={(e) => setReviewData({ ...reviewData, remarks: e.target.value })}
+                      required={reviewData.status === "Rejected"}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-black font-medium"
+                      placeholder={reviewData.status === "Rejected" ? "Provide reason for rejection..." : "Optional review notes..."}
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`flex-1 px-6 py-3 rounded-lg transition-colors font-medium disabled:opacity-50 ${
+                        reviewData.status === "Published"
+                          ? "bg-green-600 text-white hover:bg-green-700"
+                          : "bg-red-600 text-white hover:bg-red-700"
+                      }`}
+                    >
+                      {loading ? "Processing..." : reviewData.status === "Published" ? "Publish Notice" : "Reject Notice"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseReviewModal}
                       className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
                     >
                       Cancel

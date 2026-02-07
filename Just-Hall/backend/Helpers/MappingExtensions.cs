@@ -43,6 +43,28 @@ namespace JustHallAPI.Helpers
             };
         }
 
+        // Staff to StaffDto
+        public static StaffDto ToDto(this Staff staff)
+        {
+            return new StaffDto
+            {
+                EmployeeId = staff.EmployeeId,
+                StaffType = staff.StaffType,
+                Department = staff.Department,
+                Designation = staff.Designation,
+                JoiningDate = staff.JoiningDate,
+                Status = staff.Status,
+                Dob = staff.Dob,
+                Gender = staff.Gender,
+                BloodGroup = staff.BloodGroup,
+                MobileNumber = staff.MobileNumber,
+                EmergencyNumber = staff.EmergencyNumber,
+                Address = staff.Address,
+                Qualification = staff.Qualification,
+                PhotoUrl = staff.PhotoUrl
+            };
+        }
+
         // Application to ApplicationDto
         public static ApplicationDto ToDto(this Application application)
         {

@@ -8,7 +8,8 @@ import { useAuth } from "@/context/auth-context";
 
 export default function OfficePage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin" || user?.role === "Admin";
+  const isAdmin = user?.role?.toLowerCase() === "admin";
+  const isAdminOrStaff = user?.role?.toLowerCase() === "admin" || user?.role?.toLowerCase() === "staff";
   
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,10 +27,10 @@ export default function OfficePage() {
   const [filterStatus, setFilterStatus] = useState<string>("Pending");
 
   useEffect(() => {
-    if (isAdmin) {
+      if (isAdminOrStaff) {
       fetchAppointments();
     }
-  }, [isAdmin]);
+    }, [isAdminOrStaff]);
 
   const fetchAppointments = async () => {
     try {
@@ -137,7 +138,7 @@ export default function OfficePage() {
         </div>
 
         {/* Admin Appointment Management */}
-        {isAdmin && (
+          {isAdminOrStaff && (
           <div className="mb-8">
             <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
               <div className="flex items-center justify-between mb-6">

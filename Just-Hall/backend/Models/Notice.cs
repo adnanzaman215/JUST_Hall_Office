@@ -27,6 +27,29 @@ namespace JustHallAPI.Models
         [Column("author")]
         public string Author { get; set; } = "Admin";
 
+        [MaxLength(20)]
+        [Column("status")]
+        public string Status { get; set; } = "PendingReview";
+
+        [Column("created_by")]
+        public int CreatedBy { get; set; }
+
+        [Column("submitted_at")]
+        public DateTime? SubmittedAt { get; set; }
+
+        [Column("reviewed_at")]
+        public DateTime? ReviewedAt { get; set; }
+
+        [Column("reviewed_by")]
+        public int? ReviewedBy { get; set; }
+
+        [MaxLength(500)]
+        [Column("review_remarks")]
+        public string? ReviewRemarks { get; set; }
+
+        [Column("published_at")]
+        public DateTime? PublishedAt { get; set; }
+
         [Column("pinned")]
         public bool Pinned { get; set; } = false;
 

@@ -81,8 +81,11 @@ export default function ProfilePage() {
         data.photoUrl = profileData.student.photoUrl || null;
       } else if (userRole.toLowerCase() === "staff" && profileData?.staff) {
         data.employeeId = profileData.staff.employeeId || "";
+        data.staffType = profileData.staff.staffType || "";
         data.department = profileData.staff.department || "";
         data.designation = profileData.staff.designation || "";
+        data.joiningDate = formatDateForInput(profileData.staff.joiningDate);
+        data.status = profileData.staff.status || "Active";
         data.dob = formatDateForInput(profileData.staff.dob);
         data.gender = profileData.staff.gender || "";
         data.bloodGroup = profileData.staff.bloodGroup || "";

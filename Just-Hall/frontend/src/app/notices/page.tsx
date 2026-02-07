@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { noticesAPI, Notice, BACKEND_URL } from "@/lib/api";
+import { getStoredUser } from "@/lib/auth";
 
 const categories = [
   "All",
@@ -14,14 +16,18 @@ const categories = [
 ];
 
 export default function NoticesPage() {
+  const router = useRouter();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [filteredNotices, setFilteredNotices] = useState<Notice[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    const user = getStoredUser();
+    setCurrentUser(user);
     fetchNotices();
   }, []);
 
@@ -99,23 +105,36 @@ export default function NoticesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
         <div className="bg-gradient-to-br from-cyan-500 via-cyan-600 to-blue-600 rounded-3xl p-8 sm:p-12 mb-8 shadow-2xl">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl">
-              <svg
-                className="w-12 h-12 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                />
-              </svg>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl">
+                <svg
+                  className="w-12 h-12 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                  />
+                </svg>
+              </div>
+              <h1 className="text-5xl font-black text-white">Notice Board</h1>
             </div>
-            <h1 className="text-5xl font-black text-white">Notice Board</h1>
+            {currentUser?.role?.toLowerCase() === "staff" && (
+              <button
+                onClick={() => router.push("/staff/notices")}
+                className="px-6 py-3 bg-white text-cyan-600 rounded-xl hover:bg-cyan-50 transition-colors font-bold flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create Notice
+              </button>
+            )}
           </div>
           <p className="text-cyan-50 text-xl font-medium">
             Stay updated with the latest hall announcements and circulars

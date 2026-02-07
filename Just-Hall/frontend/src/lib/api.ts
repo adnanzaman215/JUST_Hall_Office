@@ -244,12 +244,12 @@ export const authAPI = {
   },
 
   completeProfileWithPhoto: async (formData: FormData, accessToken: string) => {
-    // Use the Next.js API proxy route for file upload
-    const response = await fetch("/api/complete-profile", {
+    // Call backend directly (no proxy needed - browser handles FormData natively)
+    const response = await fetch("http://localhost:8000/api/users/auth/complete-profile", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
-        // Don't set Content-Type for FormData - browser will set it with boundary
+        // Don't set Content-Type for FormData - browser will set it with boundary automatically
       },
       body: formData,
     });
@@ -394,6 +394,14 @@ export interface Notice {
   pinned: boolean;
   attachmentUrl?: string | null;
   expiresAt?: string | null;
+  status?: string;
+  createdBy?: number;
+  createdByName?: string | null;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  reviewedByName?: string | null;
+  reviewRemarks?: string | null;
+  publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -406,6 +414,7 @@ export interface CreateNoticeRequest {
   pinned?: boolean;
   attachmentUrl?: string;
   expiresAt?: string;
+  publishNow?: boolean;
 }
 
 export interface UpdateNoticeRequest {
@@ -416,6 +425,11 @@ export interface UpdateNoticeRequest {
   pinned?: boolean;
   attachmentUrl?: string;
   expiresAt?: string;
+}
+
+export interface ReviewNoticeRequest {
+  status: "Published" | "Rejected";
+  remarks?: string | null;
 }
 
 export const noticesAPI = {
@@ -451,7 +465,7 @@ export const noticesAPI = {
     return await response.json();
   },
 
-  // Create notice (admin only)
+  // Create notice (admin/staff)
   createNotice: async (noticeData: CreateNoticeRequest, token: string): Promise<Notice> => {
     const response = await fetch(`${API_BASE_URL}/notices`, {
       method: 'POST',
@@ -463,8 +477,19 @@ export const noticesAPI = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to create notice');
+      let errorMessage = 'Failed to create notice';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch {
+        // If response has no JSON body, use status-based message
+        if (response.status === 403) {
+          errorMessage = 'Access denied. Only Administrative Staff can create notices.';
+        } else if (response.status === 401) {
+          errorMessage = 'Authentication required. Please login again.';
+        }
+      }
+      throw new Error(errorMessage);
     }
 
     return await response.json();
@@ -502,6 +527,70 @@ export const noticesAPI = {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Failed to delete notice');
     }
+  },
+
+  // Admin: get all notices
+  getAllNotices: async (token: string): Promise<Notice[]> => {
+    const response = await fetch(`${API_BASE_URL}/notices/all`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch all notices');
+    }
+
+    return await response.json();
+  },
+
+  // Staff: get my notices
+  getMyNotices: async (token: string): Promise<Notice[]> => {
+    const response = await fetch(`${API_BASE_URL}/notices/mine`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to fetch staff notices';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch {
+        if (response.status === 403) {
+          errorMessage = 'Access denied. Only Administrative Staff can view notices.';
+        } else if (response.status === 401) {
+          errorMessage = 'Authentication required. Please login again.';
+        }
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  },
+
+  // Admin: review notice
+  reviewNotice: async (id: number, data: ReviewNoticeRequest, token: string): Promise<Notice> => {
+    const response = await fetch(`${API_BASE_URL}/notices/${id}/review`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to review notice');
+    }
+
+    return await response.json();
   },
 
   // Upload attachment (admin only)

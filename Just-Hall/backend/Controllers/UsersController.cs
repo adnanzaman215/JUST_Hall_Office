@@ -155,8 +155,11 @@ namespace JustHallAPI.Controllers
                 staffDto = new StaffDto
                 {
                     EmployeeId = staff.EmployeeId,
+                    StaffType = staff.StaffType,
                     Department = staff.Department,
                     Designation = staff.Designation,
+                    JoiningDate = staff.JoiningDate,
+                    Status = staff.Status,
                     Dob = staff.Dob,
                     Gender = staff.Gender,
                     BloodGroup = staff.BloodGroup,
@@ -339,8 +342,11 @@ namespace JustHallAPI.Controllers
                         staffDto = new StaffDto
                         {
                             EmployeeId = staff.EmployeeId,
+                            StaffType = staff.StaffType,
                             Department = staff.Department,
                             Designation = staff.Designation,
+                            JoiningDate = staff.JoiningDate,
+                            Status = staff.Status,
                             Dob = staff.Dob,
                             Gender = staff.Gender,
                             BloodGroup = staff.BloodGroup,
@@ -405,8 +411,43 @@ namespace JustHallAPI.Controllers
         // POST: api/users/auth/complete-profile
         [HttpPost("complete-profile")]
         [Authorize]
-        public async Task<ActionResult<CompleteProfileResponse>> CompleteProfile([FromForm] CompleteProfileRequest request)
+        public async Task<ActionResult<CompleteProfileResponse>> CompleteProfile()
         {
+            // Debug logging
+            Console.WriteLine($"🔍 CompleteProfile - Content-Type: {Request.ContentType}");
+            Console.WriteLine($"🔍 CompleteProfile - Method: {Request.Method}");
+            Console.WriteLine($"🔍 CompleteProfile - Has FormContent: {Request.HasFormContentType}");
+            
+            // Read form data manually
+            if (!Request.HasFormContentType)
+            {
+                return BadRequest(new { error = "Request must be multipart/form-data" });
+            }
+            
+            var form = await Request.ReadFormAsync();
+            
+            var request = new CompleteProfileRequest
+            {
+                StudentId = form["studentId"].FirstOrDefault() ?? string.Empty,
+                Department = form["department"].FirstOrDefault() ?? string.Empty,
+                Session = form["session"].FirstOrDefault() ?? string.Empty,
+                Dob = string.IsNullOrEmpty(form["dob"].FirstOrDefault()) ? null : DateTime.Parse(form["dob"].FirstOrDefault() ?? ""),
+                Gender = form["gender"].FirstOrDefault() ?? string.Empty,
+                BloodGroup = form["bloodGroup"].FirstOrDefault() ?? string.Empty,
+                FatherName = form["fatherName"].FirstOrDefault() ?? string.Empty,
+                MotherName = form["motherName"].FirstOrDefault() ?? string.Empty,
+                MobileNumber = form["mobileNumber"].FirstOrDefault() ?? string.Empty,
+                EmergencyNumber = form["emergencyNumber"].FirstOrDefault() ?? string.Empty,
+                Address = form["address"].FirstOrDefault() ?? string.Empty,
+                StaffType = form["staffType"].FirstOrDefault() ?? string.Empty,
+                Designation = form["designation"].FirstOrDefault() ?? string.Empty,
+                JoiningDate = string.IsNullOrEmpty(form["joiningDate"].FirstOrDefault()) ? null : DateTime.Parse(form["joiningDate"].FirstOrDefault() ?? ""),
+                Status = form["status"].FirstOrDefault() ?? string.Empty,
+                Qualification = form["qualification"].FirstOrDefault() ?? string.Empty,
+            };
+            
+            Console.WriteLine($"✅ CompleteProfile - Parsed form data: StudentId={request.StudentId}, StaffType={request.StaffType}");
+            
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             
             var user = await _context.Users
@@ -440,7 +481,7 @@ namespace JustHallAPI.Controllers
                     if (!string.IsNullOrEmpty(request.Address)) student.Address = request.Address;
 
                     // Handle photo upload if present
-                    var photoFile = Request.Form.Files.GetFile("photo");
+                    var photoFile = form.Files.GetFile("photo");
                     if (photoFile != null && photoFile.Length > 0)
                     {
                         var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
@@ -505,19 +546,22 @@ namespace JustHallAPI.Controllers
                 if (existingStaff != null)
                 {
                     // Update existing staff profile
-                    if (!string.IsNullOrEmpty(request.StudentId)) existingStaff.EmployeeId = request.StudentId; // Using StudentId field for EmployeeId
+                    if (!string.IsNullOrEmpty(request.StudentId)) existingStaff.EmployeeId = request.StudentId;
+                    if (!string.IsNullOrEmpty(request.StaffType)) existingStaff.StaffType = request.StaffType;
                     if (!string.IsNullOrEmpty(request.Department)) existingStaff.Department = request.Department;
-                    if (!string.IsNullOrEmpty(request.Session)) existingStaff.Designation = request.Session; // Using Session field for Designation
+                    if (!string.IsNullOrEmpty(request.Designation)) existingStaff.Designation = request.Designation;
+                    if (request.JoiningDate.HasValue) existingStaff.JoiningDate = request.JoiningDate;
+                    if (!string.IsNullOrEmpty(request.Status)) existingStaff.Status = request.Status;
                     if (request.Dob.HasValue) existingStaff.Dob = request.Dob;
                     if (!string.IsNullOrEmpty(request.Gender)) existingStaff.Gender = request.Gender;
                     if (!string.IsNullOrEmpty(request.BloodGroup)) existingStaff.BloodGroup = request.BloodGroup;
                     if (!string.IsNullOrEmpty(request.MobileNumber)) existingStaff.MobileNumber = request.MobileNumber;
                     if (!string.IsNullOrEmpty(request.EmergencyNumber)) existingStaff.EmergencyNumber = request.EmergencyNumber;
                     if (!string.IsNullOrEmpty(request.Address)) existingStaff.Address = request.Address;
-                    if (!string.IsNullOrEmpty(request.FatherName)) existingStaff.Qualification = request.FatherName; // Using FatherName field for Qualification
+                    if (!string.IsNullOrEmpty(request.Qualification)) existingStaff.Qualification = request.Qualification;
                     
                     // Handle photo upload
-                    var photoFile = Request.Form.Files.GetFile("photo");
+                    var photoFile = form.Files.GetFile("photo");
                     if (photoFile != null && photoFile.Length > 0)
                     {
                         var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
@@ -539,21 +583,23 @@ namespace JustHallAPI.Controllers
                     var staff = new Staff
                     {
                         UserId = user.Id,
-                        EmployeeId = request.StudentId, // Using StudentId field for EmployeeId
+                        EmployeeId = request.StudentId,
+                        StaffType = request.StaffType,
                         Department = request.Department,
-                        Designation = request.Session, // Using Session field for Designation
-                        JoiningDate = DateTime.UtcNow,
+                        Designation = request.Designation,
+                        JoiningDate = request.JoiningDate ?? DateTime.UtcNow,
+                        Status = string.IsNullOrEmpty(request.Status) ? "Active" : request.Status,
                         Dob = request.Dob,
                         Gender = request.Gender,
                         BloodGroup = request.BloodGroup,
                         MobileNumber = request.MobileNumber,
                         EmergencyNumber = request.EmergencyNumber,
                         Address = request.Address,
-                        Qualification = request.FatherName // Using FatherName field for Qualification
+                        Qualification = request.Qualification
                     };
 
                     // Handle photo upload
-                    var photoFile = Request.Form.Files.GetFile("photo");
+                    var photoFile = form.Files.GetFile("photo");
                     if (photoFile != null && photoFile.Length > 0)
                     {
                         var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
@@ -589,7 +635,7 @@ namespace JustHallAPI.Controllers
                     if (!string.IsNullOrEmpty(request.Address)) existingAdmin.Address = request.Address;
                     
                     // Handle photo upload
-                    var photoFile = Request.Form.Files.GetFile("photo");
+                    var photoFile = form.Files.GetFile("photo");
                     if (photoFile != null && photoFile.Length > 0)
                     {
                         var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
@@ -622,7 +668,7 @@ namespace JustHallAPI.Controllers
                     };
 
                     // Handle photo upload
-                    var photoFile = Request.Form.Files.GetFile("photo");
+                    var photoFile = form.Files.GetFile("photo");
                     if (photoFile != null && photoFile.Length > 0)
                     {
                         var fileName = $"{Guid.NewGuid()}_{photoFile.FileName}";
@@ -682,8 +728,11 @@ namespace JustHallAPI.Controllers
                     staffDto = new StaffDto
                     {
                         EmployeeId = staff.EmployeeId,
+                        StaffType = staff.StaffType,
                         Department = staff.Department,
                         Designation = staff.Designation,
+                        JoiningDate = staff.JoiningDate,
+                        Status = staff.Status,
                         Dob = staff.Dob,
                         Gender = staff.Gender,
                         BloodGroup = staff.BloodGroup,

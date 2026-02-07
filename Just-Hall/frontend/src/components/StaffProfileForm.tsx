@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { getStoredToken } from "@/lib/auth";
 
 interface StaffProfileFormProps {
   onSubmit: (data: any) => Promise<void>;
@@ -20,9 +21,10 @@ export default function StaffProfileForm({
   const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(initialData.photoUrl || null);
   const [fullName, setFullName] = useState(initialData.fullName || "");
   const [employeeId, setEmployeeId] = useState(initialData.employeeId || "");
-  const [designation, setDesignation] = useState(initialData.designation || "");
-  const [department, setDepartment] = useState(initialData.department || "");
-  const [joiningDate, setJoiningDate] = useState(initialData.joiningDate || "");
+  const [staffType, setStaffType] = useState(initialData.staffType || "");
+  const [serviceRole, setServiceRole] = useState(initialData.designation || "");
+  const [joiningDate, setJoiningDate] = useState(initialData.joiningDate ? initialData.joiningDate.split('T')[0] : "");
+  const [status, setStatus] = useState(initialData.status || "Active");
   const [dob, setDob] = useState(initialData.dob || "");
   const [gender, setGender] = useState(initialData.gender || "");
   const [bloodGroup, setBloodGroup] = useState(initialData.bloodGroup || "");
@@ -30,7 +32,6 @@ export default function StaffProfileForm({
   const [emergencyMobile, setEmergencyMobile] = useState(initialData.emergencyNumber || "");
   const [email, setEmail] = useState(initialData.email || "");
   const [address, setAddress] = useState(initialData.address || "");
-  const [qualification, setQualification] = useState(initialData.qualification || "");
 
   // Update existingPhotoUrl when initialData changes
   useEffect(() => {
@@ -43,17 +44,22 @@ export default function StaffProfileForm({
     e.preventDefault();
 
     const formData = new FormData();
-    // Backend expects these exact field names from CompleteProfileRequest
+    // Staff-specific fields
     formData.append('studentId', employeeId); // Backend uses studentId field for employeeId
-    formData.append('session', designation); // Backend uses session field for designation
-    formData.append('department', department);
+    formData.append('staffType', staffType);
+    formData.append('designation', serviceRole || 'Not assigned'); // Backend uses designation field for service role
+    if (joiningDate) formData.append('joiningDate', joiningDate);
+    formData.append('status', status);
+    
+    // Personal fields
     formData.append('dob', dob);
     formData.append('gender', gender);
     formData.append('bloodGroup', bloodGroup);
+    
+    // Contact fields
     formData.append('mobileNumber', mobile);
     formData.append('emergencyNumber', emergencyMobile);
     formData.append('address', address);
-    formData.append('fatherName', qualification); // Backend uses fatherName field for qualification
     
     if (photo) {
       formData.append('photo', photo);
@@ -61,15 +67,16 @@ export default function StaffProfileForm({
 
     console.log('Staff form submitting with data:', {
       employeeId,
-      designation,
-      department,
+      staffType,
+      serviceRole,
+      joiningDate,
+      status,
       dob,
       gender,
       bloodGroup,
       mobile,
       emergencyMobile,
       address,
-      qualification,
       hasPhoto: !!photo
     });
 
@@ -77,6 +84,7 @@ export default function StaffProfileForm({
   };
 
   return (
+    <>
     <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-8">
       {error && (
         <div className="col-span-full bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -125,7 +133,7 @@ export default function StaffProfileForm({
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
-              placeholder="e.g., Md. Rahim Uddin"
+              placeholder="Rahim Uddin"
               required
             />
           </div>
@@ -135,35 +143,65 @@ export default function StaffProfileForm({
               type="text"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
-              placeholder="e.g., EMP-2021-001"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black bg-gray-100"
+              placeholder="EMP-1-2021"
               required
+              readOnly
             />
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:gap-4">
           <div className="flex flex-col w-full">
-            <label className="block text-sm font-medium text-slate-700">Designation *</label>
+            <label className="block text-sm font-medium text-slate-700">Staff Type *</label>
+            <select
+              value={staffType}
+              onChange={(e) => setStaffType(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
+              required
+            >
+              <option value="">Select Staff Type</option>
+              <option value="Teaching">Teaching</option>
+              <option value="Non-Teaching">Non-Teaching</option>
+              <option value="Administrative">Administrative</option>
+              <option value="Hall Staff">Hall Staff</option>
+            </select>
+          </div>
+          <div className="flex flex-col w-full">
+            <label className="block text-sm font-medium text-slate-700">Service Role</label>
             <input
               type="text"
-              value={designation}
-              onChange={(e) => setDesignation(e.target.value)}
+              value={serviceRole || "Not assigned"}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none text-black bg-gray-100"
+              readOnly
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:gap-4">
+          <div className="flex flex-col w-full">
+            <label className="block text-sm font-medium text-slate-700">Joining Date *</label>
+            <input
+              type="date"
+              value={joiningDate}
+              onChange={(e) => setJoiningDate(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
-              placeholder="e.g., Assistant Professor"
               required
             />
           </div>
           <div className="flex flex-col w-full">
-            <label className="block text-sm font-medium text-slate-700">Department *</label>
-            <input
-              type="text"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
+            <label className="block text-sm font-medium text-slate-700">Status *</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
-              placeholder="e.g., Computer Science"
               required
-            />
+            >
+              <option value="Active">Active</option>
+              <option value="On Leave">On Leave</option>
+              <option value="Suspended">Suspended</option>
+              <option value="Retired">Retired</option>
+            </select>
           </div>
         </div>
 
@@ -214,19 +252,6 @@ export default function StaffProfileForm({
             </select>
           </div>
           <div className="flex flex-col w-full">
-            <label className="block text-sm font-medium text-slate-700">Qualification</label>
-            <input
-              type="text"
-              value={qualification}
-              onChange={(e) => setQualification(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
-              placeholder="e.g., PhD in Computer Science"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:gap-4">
-          <div className="flex flex-col w-full">
             <label className="block text-sm font-medium text-slate-700">Mobile Number *</label>
             <input
               type="tel"
@@ -237,6 +262,9 @@ export default function StaffProfileForm({
               required
             />
           </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:gap-4">
           <div className="flex flex-col w-full">
             <label className="block text-sm font-medium text-slate-700">Emergency Mobile Number *</label>
             <input
@@ -248,19 +276,18 @@ export default function StaffProfileForm({
               required
             />
           </div>
-        </div>
-
-        <div className="flex flex-col w-full">
-          <label className="block text-sm font-medium text-slate-700">Email *</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black bg-gray-100 cursor-not-allowed"
-            placeholder="something@staff.just.edu.bd"
-            required
-            disabled
-          />
+          <div className="flex flex-col w-full">
+            <label className="block text-sm font-medium text-slate-700">Email *</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black bg-gray-100 cursor-not-allowed"
+              placeholder="rahim@staff.just.edu.bd"
+              required
+              disabled
+            />
+          </div>
         </div>
 
         <div className="flex flex-col w-full">
@@ -286,5 +313,6 @@ export default function StaffProfileForm({
         </div>
       </form>
     </div>
+    </>
   );
 }

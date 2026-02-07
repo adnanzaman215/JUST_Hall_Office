@@ -4,6 +4,16 @@ import { useRouter } from "next/navigation";
 import { authAPI } from "@/lib/api";
 import { getStoredToken, getStoredUser } from "@/lib/auth";
 
+interface RoleRequest {
+  id: number;
+  requestedRole: string;
+  status: string;
+  remarks?: string;
+  requestedAt: string;
+  reviewedAt?: string;
+  reviewedByName?: string;
+}
+
 export default function MyProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -12,6 +22,15 @@ export default function MyProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Role request states
+  const [roleRequests, setRoleRequests] = useState<RoleRequest[]>([]);
+  const [showRoleRequestModal, setShowRoleRequestModal] = useState(false);
+  const [requestedRole, setRequestedRole] = useState("");
+  const [requestRemarks, setRequestRemarks] = useState("");
+  const [roleRequestLoading, setRoleRequestLoading] = useState(false);
+  const [roleRequestError, setRoleRequestError] = useState<string | null>(null);
+  const [roleRequestSuccess, setRoleRequestSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -23,9 +42,79 @@ export default function MyProfilePage() {
     }
 
     setUser(userData);
-    setRole(userData.role?.toLowerCase() || "student");
+    const userRole = userData.role?.toLowerCase() || "student";
+    setRole(userRole);
     fetchProfile(token);
+    
+    // Fetch role requests if user is staff
+    if (userRole === "staff") {
+      fetchRoleRequests(token);
+    }
   }, [router]);
+
+  const fetchRoleRequests = async (token: string) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/role-requests/my-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRoleRequests(data.roleRequests || []);
+      }
+    } catch (error) {
+      console.error('Error fetching role requests:', error);
+    }
+  };
+
+  const handleRoleRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRoleRequestLoading(true);
+    setRoleRequestError(null);
+    setRoleRequestSuccess(null);
+
+    try {
+      const token = getStoredToken();
+      if (!token) {
+        setRoleRequestError('Authentication required');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8000/api/role-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          requestedRole,
+          remarks: requestRemarks.trim() || null
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setRoleRequestSuccess(data.message);
+        setRequestedRole('');
+        setRequestRemarks('');
+        setShowRoleRequestModal(false);
+        
+        const token2 = getStoredToken();
+        if (token2) {
+          await fetchRoleRequests(token2);
+        }
+      } else {
+        setRoleRequestError(data.message || 'Failed to submit role request');
+      }
+    } catch (error: any) {
+      setRoleRequestError(error.message || 'Failed to submit role request');
+    } finally {
+      setRoleRequestLoading(false);
+    }
+  };
 
   const fetchProfile = async (token: string) => {
     try {
@@ -62,6 +151,85 @@ export default function MyProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Role Request Modal */}
+      {showRoleRequestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Request Service Role</h3>
+              <button
+                onClick={() => {
+                  setShowRoleRequestModal(false);
+                  setRequestedRole('');
+                  setRequestRemarks('');
+                  setRoleRequestError(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {roleRequestError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+                {roleRequestError}
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Requested Role *
+                </label>
+                <input
+                  type="text"
+                  value={requestedRole}
+                  onChange={(e) => setRequestedRole(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
+                  placeholder="e.g., Hall Provost, Assistant Provost"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Remarks (Optional)
+                </label>
+                <textarea
+                  value={requestRemarks}
+                  onChange={(e) => setRequestRemarks(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-600 text-black"
+                  placeholder="Add any additional information..."
+                />
+              </div>
+              
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRoleRequestModal(false);
+                    setRequestedRole('');
+                    setRequestRemarks('');
+                    setRoleRequestError(null);
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRoleRequest}
+                  disabled={!requestedRole.trim() || roleRequestLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {roleRequestLoading ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
@@ -177,12 +345,20 @@ export default function MyProfilePage() {
                   <p className="text-gray-900 font-medium">{profileData.staff.employeeId || "Not provided"}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Department</label>
-                  <p className="text-gray-900 font-medium">{profileData.staff.department || "Not provided"}</p>
+                  <label className="text-sm font-medium text-gray-500">Staff Type</label>
+                  <p className="text-gray-900 font-medium">{profileData.staff.staffType || "Not provided"}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Designation</label>
+                  <label className="text-sm font-medium text-gray-500">Service Role</label>
                   <p className="text-gray-900 font-medium">{profileData.staff.designation || "Not provided"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Joining Date</label>
+                  <p className="text-gray-900 font-medium">{formatDate(profileData.staff.joiningDate)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <p className="text-gray-900 font-medium">{profileData.staff.status || "Not provided"}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Date of Birth</label>
@@ -205,8 +381,8 @@ export default function MyProfilePage() {
                   <p className="text-gray-900 font-medium">{profileData.staff.emergencyNumber || "Not provided"}</p>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="text-sm font-medium text-gray-500">Qualification</label>
-                  <p className="text-gray-900 font-medium">{profileData.staff.qualification || "Not provided"}</p>
+                  <label className="text-sm font-medium text-gray-500">Email</label>
+                  <p className="text-gray-900 font-medium">{user?.email || "Not provided"}</p>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-sm font-medium text-gray-500">Address</label>
@@ -248,7 +424,96 @@ export default function MyProfilePage() {
                 </div>
               </div>
             )}
+            {/* Role Request Section for Staff */}
+            {role === "staff" && profileData?.staff && (
+              <div className="col-span-full mt-6">
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-6 border border-blue-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Role Request</h3>
+                  
+                  {roleRequestSuccess && (
+                    <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                      {roleRequestSuccess}
+                    </div>
+                  )}
 
+                  <div className="space-y-4">
+                    {/* Current Role Status */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600 block mb-1">Current Service Role</label>
+                        <p className="text-gray-900 font-medium text-lg">{profileData.staff.designation || "Not assigned"}</p>
+                      </div>
+                      
+                      {/* Request Status */}
+                      {roleRequests.length > 0 && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-600 block mb-1">Latest Request Status</label>
+                          <div className="flex gap-2 items-center">
+                            {roleRequests[0]?.status === 'Pending' && (
+                              <span className="inline-flex items-center px-3 py-1 bg-amber-100 text-amber-800 text-sm font-medium rounded-full">
+                                ⏳ Pending
+                              </span>
+                            )}
+                            {roleRequests[0]?.status === 'Approved' && (
+                              <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                ✓ Approved
+                              </span>
+                            )}
+                            {roleRequests[0]?.status === 'Rejected' && (
+                              <span className="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">
+                                ✕ Rejected
+                              </span>
+                            )}
+                            {roleRequests[0]?.status === 'Approved' && (
+                              <span className="text-sm text-green-700">for {roleRequests[0].requestedRole}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Request Button */}
+                    {!roleRequests.some(r => r.status === 'Pending') && (
+                      <button
+                        onClick={() => setShowRoleRequestModal(true)}
+                        disabled={roleRequestLoading}
+                        className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                      >
+                        {roleRequests.some(r => r.status === 'Approved') ? 'Request Role Change' : 'Request Job Role'}
+                      </button>
+                    )}
+
+                    {/* Request History */}
+                    {roleRequests.length > 0 && (
+                      <div className="mt-4">
+                        <label className="text-sm font-medium text-gray-600 block mb-2">Request History</label>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {roleRequests.map((req) => (
+                            <div key={req.id} className="bg-white p-3 rounded border border-gray-200">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-900">{req.requestedRole}</p>
+                                  <p className="text-xs text-gray-500 mt-1">Requested: {new Date(req.requestedAt).toLocaleDateString()}</p>
+                                  {req.remarks && <p className="text-sm text-gray-600 mt-1">Remarks: {req.remarks}</p>}
+                                </div>
+                                <div className="text-right ml-2">
+                                  {req.status === 'Pending' && <span className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded">Pending</span>}
+                                  {req.status === 'Approved' && <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Approved</span>}
+                                  {req.status === 'Rejected' && <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded">Rejected</span>}
+                                </div>
+                              </div>
+                              {req.reviewedByName && (
+                                <p className="text-xs text-gray-500 mt-2">Reviewed by: {req.reviewedByName}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             {/* No profile data found */}
             {!profileData?.student && !profileData?.staff && !profileData?.admin && (
               <div className="col-span-2">

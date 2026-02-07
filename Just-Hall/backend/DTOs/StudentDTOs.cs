@@ -21,8 +21,11 @@ namespace JustHallAPI.DTOs
     public class StaffDto
     {
         public string EmployeeId { get; set; } = string.Empty;
+        public string StaffType { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
         public string Designation { get; set; } = string.Empty;
+        public DateTime? JoiningDate { get; set; }
+        public string Status { get; set; } = "Active";
         public DateTime? Dob { get; set; }
         public string Gender { get; set; } = string.Empty;
         public string BloodGroup { get; set; } = string.Empty;
@@ -58,6 +61,13 @@ namespace JustHallAPI.DTOs
         public string MobileNumber { get; set; } = string.Empty;
         public string EmergencyNumber { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
+        
+        // Staff-specific fields
+        public string StaffType { get; set; } = string.Empty;
+        public string Designation { get; set; } = string.Empty;
+        public DateTime? JoiningDate { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Qualification { get; set; } = string.Empty;
     }
 
     public class ProfileResponse

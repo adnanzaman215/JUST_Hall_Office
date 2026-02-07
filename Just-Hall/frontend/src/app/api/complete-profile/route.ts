@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import FormData from 'form-data';
+import { Readable } from 'stream';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,8 +17,29 @@ export async function POST(request: NextRequest) {
     if (contentType && contentType.includes('multipart/form-data')) {
       // Handle FormData (with file upload)
       console.log('📁 Proxy: Handling file upload with FormData');
-      body = await request.formData();
-      // Don't set Content-Type for FormData - let fetch handle it
+      const formData = await request.formData();
+      
+      // Create a new FormData for sending to backend
+      const backendFormData = new FormData();
+      
+      // Iterate through all form entries
+      for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          // Handle file uploads
+          console.log(`📁 Adding file: ${key} (${value.name})`);
+          const buffer = await value.arrayBuffer();
+          backendFormData.append(key, Readable.from(Buffer.from(buffer)), value.name);
+        } else {
+          // Handle regular form fields
+          console.log(`📝 Adding field: ${key} = ${value}`);
+          backendFormData.append(key, value);
+        }
+      }
+      
+      body = backendFormData;
+      // Get headers from FormData (includes Content-Type with boundary)
+      headers = backendFormData.getHeaders();
+      console.log('📦 FormData headers:', Object.keys(headers));
     } else {
       // Handle JSON data
       console.log('📦 Proxy: Handling JSON data');
@@ -29,7 +52,7 @@ export async function POST(request: NextRequest) {
       headers['Authorization'] = authHeader;
     }
 
-    // Forward the request to the Django backend
+    // Forward the request to the backend
     const backendResponse = await fetch('http://localhost:8000/api/users/auth/complete-profile', {
       method: 'POST',
       headers: headers,
