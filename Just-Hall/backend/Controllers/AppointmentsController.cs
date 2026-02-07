@@ -25,9 +25,9 @@ namespace JustHallAPI.Controllers
             _context = context;
         }
 
-        // GET: api/appointments (Admin - Get all appointments)
+        // GET: api/appointments (Admin/Staff - Get all appointments)
         [HttpGet]
-        [Authorize(Roles = "admin,Admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<IEnumerable<AppointmentResponseDTO>>> GetAllAppointments()
         {
             var appointments = await _context.Appointments
@@ -200,9 +200,9 @@ namespace JustHallAPI.Controllers
             return CreatedAtAction(nameof(GetAppointment), new { id = appointment.Id }, response);
         }
 
-        // PUT: api/appointments/{id}/status (Admin - Update appointment status)
+        // PUT: api/appointments/{id}/status (Admin/Staff - Update appointment status)
         [HttpPut("{id}/status")]
-        [Authorize(Roles = "admin,Admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<AppointmentResponseDTO>> UpdateAppointmentStatus(int id, [FromBody] UpdateAppointmentStatusDTO dto)
         {
             var appointment = await _context.Appointments

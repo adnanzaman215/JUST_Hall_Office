@@ -94,11 +94,15 @@ export default function VerifyPaymentsPage() {
       if (response.ok) {
         const data = await response.json();
         setSummary(data);
+      } else if (response.status === 403 || response.status === 401) {
+        setError('You do not have permission to access this page. This page is for Staff/Admin only.');
       } else {
-        console.error('Failed to fetch summary');
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to fetch payment summary');
       }
     } catch (err) {
       console.error('Error fetching payment summary:', err);
+      setError('Unable to connect to server. Please try again later.');
     }
   };
 
@@ -115,9 +119,16 @@ export default function VerifyPaymentsPage() {
       if (response.ok) {
         const data = await response.json();
         setPayments(data);
+        setError('');
+      } else if (response.status === 403 || response.status === 401) {
+        setError('You do not have permission to access this page. This page is for Staff/Admin only.');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to fetch payments');
       }
     } catch (err) {
       console.error('Error fetching payments:', err);
+      setError('Unable to connect to server. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -200,6 +211,8 @@ export default function VerifyPaymentsPage() {
           </span>
         );
     }
+  };
+
   // Show loading state while checking authentication
   if (authLoading || !initialLoadComplete) {
     return (
@@ -216,8 +229,6 @@ export default function VerifyPaymentsPage() {
   if (!isAuthenticated) {
     return null;
   }
-
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

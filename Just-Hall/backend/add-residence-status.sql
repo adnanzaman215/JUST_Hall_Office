@@ -7,14 +7,14 @@ UPDATE users_student
 SET residence_status = 'non-resident' 
 WHERE residence_status IS NULL;
 
--- Make room_no nullable and set to NULL for non-residents
+-- Make room_no VARCHAR(20) to support seat designations like "230B1"
 ALTER TABLE users_student 
-MODIFY COLUMN room_no INT NULL;
+MODIFY COLUMN room_no VARCHAR(20) NULL;
 
--- Update existing students with room_no = 0 to NULL
+-- Clear any old numeric values
 UPDATE users_student 
 SET room_no = NULL 
-WHERE room_no = 0;
+WHERE room_no = '0' OR room_no = '';
 
 -- Show the updated structure
 DESCRIBE users_student;

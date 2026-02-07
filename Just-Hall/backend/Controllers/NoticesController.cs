@@ -76,7 +76,7 @@ namespace JustHallAPI.Controllers
 
         // POST: api/notices
         [HttpPost]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<NoticeDto>> CreateNotice([FromBody] CreateNoticeRequest request)
         {
             var notice = new Notice
@@ -114,7 +114,7 @@ namespace JustHallAPI.Controllers
 
         // PUT: api/notices/{id}
         [HttpPut("{id}")]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<NoticeDto>> UpdateNotice(int id, [FromBody] UpdateNoticeRequest request)
         {
             var notice = await _context.Notices.FindAsync(id);
@@ -152,7 +152,7 @@ namespace JustHallAPI.Controllers
 
         // PATCH: api/notices/{id}
         [HttpPatch("{id}")]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<NoticeDto>> PartialUpdateNotice(int id, [FromBody] UpdateNoticeRequest request)
         {
             return await UpdateNotice(id, request);
@@ -160,7 +160,7 @@ namespace JustHallAPI.Controllers
 
         // DELETE: api/notices/{id}
         [HttpDelete("{id}")]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult> DeleteNotice(int id)
         {
             var notice = await _context.Notices.FindAsync(id);
@@ -186,7 +186,7 @@ namespace JustHallAPI.Controllers
 
         // POST: api/notices/upload-attachment
         [HttpPost("upload-attachment")]
-        [Authorize(Roles = "admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<object>> UploadAttachment([FromForm] IFormFile file)
         {
             if (file == null || file.Length == 0)

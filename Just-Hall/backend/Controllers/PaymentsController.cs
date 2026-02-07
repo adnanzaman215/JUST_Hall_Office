@@ -177,7 +177,7 @@ namespace JustHallAPI.Controllers
                     .OrderByDescending(p => p.CreatedAt)
                     .ToListAsync();
 
-                var response = payments.Select(MapToPaymentResponse).ToList();
+                var response = payments.Select(p => MapToPaymentResponse(p)).ToList();
                 return Ok(response);
             }
             catch (Exception ex)
@@ -230,7 +230,7 @@ namespace JustHallAPI.Controllers
                     PaidAmount = verifiedAmount,
                     DueAmount = dueAmount,
                     IsPaid = verifiedAmount >= requiredAmount,
-                    PaymentsForYear = paymentsForYear.Select(MapToPaymentResponse).ToList()
+                    PaymentsForYear = paymentsForYear.Select(p => MapToPaymentResponse(p)).ToList()
                 };
 
                 return Ok(response);
@@ -271,51 +271,32 @@ namespace JustHallAPI.Controllers
                     .ThenByDescending(p => p.CreatedAt)
                     .ToListAsync();
 
-                // Get unique years from payments and add typical academic years
+                // Only show current year payment status
                 var currentYear = DateTime.UtcNow.Year;
-                var paymentYears = allPayments.Select(p => p.PaymentYear).Distinct().ToList();
                 
-                // Add academic years (assume 1st year to 4th year)
-                var academicYears = new List<int>();
-                for (int i = 0; i < 4; i++)
-                {
-                    int year = currentYear - i;
-                    if (!academicYears.Contains(year))
-                        academicYears.Add(year);
-                }
-                
-                // Add any years from payments that aren't in academic years
-                foreach (var year in paymentYears)
-                {
-                    if (!academicYears.Contains(year))
-                        academicYears.Add(year);
-                }
-                
-                academicYears = academicYears.OrderByDescending(y => y).ToList();
-
                 var duesResponses = new List<PaymentDuesResponse>();
                 decimal requiredAmount = 15000; // Default yearly hall fee
 
-                foreach (var year in academicYears)
+                // Create response for current year only
+                var year = currentYear;
+                
+                var paymentsForYear = allPayments.Where(p => p.PaymentYear == year).ToList();
+                
+                decimal verifiedAmount = paymentsForYear
+                    .Where(p => p.Status == "verified")
+                    .Sum(p => p.Amount);
+
+                decimal dueAmount = Math.Max(0, requiredAmount - verifiedAmount);
+
+                duesResponses.Add(new PaymentDuesResponse
                 {
-                    var paymentsForYear = allPayments.Where(p => p.PaymentYear == year).ToList();
-                    
-                    decimal verifiedAmount = paymentsForYear
-                        .Where(p => p.Status == "verified")
-                        .Sum(p => p.Amount);
-
-                    decimal dueAmount = Math.Max(0, requiredAmount - verifiedAmount);
-
-                    duesResponses.Add(new PaymentDuesResponse
-                    {
-                        CurrentYear = year,
-                        RequiredAmount = requiredAmount,
-                        PaidAmount = verifiedAmount,
-                        DueAmount = dueAmount,
-                        IsPaid = verifiedAmount >= requiredAmount,
-                        PaymentsForYear = paymentsForYear.Select(MapToPaymentResponse).ToList()
-                    });
-                }
+                    CurrentYear = year,
+                    RequiredAmount = requiredAmount,
+                    PaidAmount = verifiedAmount,
+                    DueAmount = dueAmount,
+                    IsPaid = verifiedAmount >= requiredAmount,
+                    PaymentsForYear = paymentsForYear.Select(p => MapToPaymentResponse(p)).ToList()
+                });
 
                 return Ok(duesResponses);
             }
@@ -328,7 +309,7 @@ namespace JustHallAPI.Controllers
 
         // GET: api/payments/all (Admin/Staff only)
         [HttpGet("all")]
-        [Authorize(Roles = "Staff,Admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<List<PaymentResponse>>> GetAllPayments(
             [FromQuery] string? status = null,
             [FromQuery] int? year = null)
@@ -356,7 +337,7 @@ namespace JustHallAPI.Controllers
                     .OrderByDescending(p => p.CreatedAt)
                     .ToListAsync();
 
-                var response = payments.Select(MapToPaymentResponse).ToList();
+                var response = payments.Select(p => MapToPaymentResponse(p)).ToList();
                 return Ok(response);
             }
             catch (Exception ex)
@@ -368,7 +349,7 @@ namespace JustHallAPI.Controllers
 
         // POST: api/payments/verify (Staff/Admin only)
         [HttpPost("verify")]
-        [Authorize(Roles = "Staff,Admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<PaymentResponse>> VerifyPayment([FromBody] VerifyPaymentRequest request)
         {
             try
@@ -379,11 +360,37 @@ namespace JustHallAPI.Controllers
                     return Unauthorized(new { message = "Invalid user token" });
                 }
 
-                // Get staff ID
-                var staff = await _context.Staff.FirstOrDefaultAsync(s => s.UserId == userId);
-                if (staff == null)
+                // Get user to check role
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user == null)
                 {
-                    return NotFound(new { message = "Staff profile not found" });
+                    return NotFound(new { message = "User not found" });
+                }
+
+                // Get staff or admin ID based on role
+                int? verifierId = null;
+                if (user.Role.ToLower() == "staff")
+                {
+                    var staff = await _context.Staff.FirstOrDefaultAsync(s => s.UserId == userId);
+                    if (staff == null)
+                    {
+                        return NotFound(new { message = "Staff profile not found" });
+                    }
+                    verifierId = staff.Id;
+                }
+                else if (user.Role.ToLower() == "admin")
+                {
+                    var admin = await _context.Admins.FirstOrDefaultAsync(a => a.UserId == userId);
+                    if (admin == null)
+                    {
+                        return NotFound(new { message = "Admin profile not found" });
+                    }
+                    verifierId = admin.Id;
+                }
+
+                if (verifierId == null)
+                {
+                    return BadRequest(new { message = "Only staff and admin can verify payments" });
                 }
 
                 var payment = await _context.Payments
@@ -412,21 +419,21 @@ namespace JustHallAPI.Controllers
                 }
 
                 payment.Status = request.Status;
-                payment.VerifiedBy = staff.Id;
+                payment.VerifiedBy = verifierId.Value;
                 payment.VerifiedAt = DateTime.UtcNow;
                 payment.RejectionReason = request.RejectionReason;
                 payment.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
+                // Get the updated payment with all details
                 var updatedPayment = await _context.Payments
                     .Include(p => p.Student)
                     .ThenInclude(s => s.User)
-                    .Include(p => p.Verifier)
-                    .ThenInclude(v => v.User)
                     .FirstOrDefaultAsync(p => p.Id == payment.Id);
 
-                var response = MapToPaymentResponse(updatedPayment!);
+                // Build response with verifier details
+                var response = MapToPaymentResponse(updatedPayment!, user.FullName);
                 return Ok(response);
             }
             catch (Exception ex)
@@ -438,7 +445,7 @@ namespace JustHallAPI.Controllers
 
         // GET: api/payments/summary (Admin/Staff only)
         [HttpGet("summary")]
-        [Authorize(Roles = "Staff,Admin")]
+        [Authorize(Roles = "staff,admin")]
         public async Task<ActionResult<PaymentSummaryResponse>> GetPaymentSummary()
         {
             try
@@ -460,7 +467,7 @@ namespace JustHallAPI.Controllers
                     RecentPayments = allPayments
                         .OrderByDescending(p => p.CreatedAt)
                         .Take(10)
-                        .Select(MapToPaymentResponse)
+                        .Select(p => MapToPaymentResponse(p))
                         .ToList()
                 };
 
@@ -474,8 +481,13 @@ namespace JustHallAPI.Controllers
         }
 
         // Helper method to map Payment to PaymentResponse
-        private PaymentResponse MapToPaymentResponse(Payment payment)
+        // Helper method to map Payment to PaymentResponse
+        private PaymentResponse MapToPaymentResponse(Payment payment, string? verifierName = null)
         {
+            // If verifier name not provided, try to get it from the Verifier navigation property (for staff)
+            // Note: This will only work for staff verifiers due to the foreign key relationship
+            string? finalVerifierName = verifierName ?? payment.Verifier?.User?.FullName;
+
             return new PaymentResponse
             {
                 Id = payment.Id,
@@ -492,7 +504,7 @@ namespace JustHallAPI.Controllers
                 ReceiptUrl = payment.ReceiptUrl,
                 Status = payment.Status,
                 VerifiedBy = payment.VerifiedBy,
-                VerifierName = payment.Verifier?.User?.FullName,
+                VerifierName = finalVerifierName,
                 VerifiedAt = payment.VerifiedAt,
                 RejectionReason = payment.RejectionReason,
                 Notes = payment.Notes,

@@ -23,35 +23,22 @@ namespace JustHallAPI.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<object>>> GetApprovedApplicantsWithoutSeats()
         {
-            // Get all approved applications where student doesn't have a room allocated
+            // Get all approved applications that don't have a room allocation yet
             var approvedApps = await _context.Applications
-                .Where(a => a.Status == "Approved")
+                .Where(a => a.Status == "Approved" && string.IsNullOrEmpty(a.RoomNo))
                 .ToListAsync();
 
-            var result = new List<object>();
-            foreach (var app in approvedApps)
+            var result = approvedApps.Select(app => new
             {
-                if (int.TryParse(app.UserId, out int userId))
-                {
-                    var hasRoom = await _context.Students
-                        .AnyAsync(s => s.UserId == userId && s.RoomNo != null);
-                    
-                    if (!hasRoom)
-                    {
-                        result.Add(new
-                        {
-                            app.Id,
-                            app.FullName,
-                            app.StudentId,
-                            app.Department,
-                            app.Session,
-                            app.ProfilePhotoUrl,
-                            app.Email,
-                            app.Mobile
-                        });
-                    }
-                }
-            }
+                app.Id,
+                app.FullName,
+                app.StudentId,
+                app.Department,
+                app.Session,
+                app.ProfilePhotoUrl,
+                app.Email,
+                app.Mobile
+            }).ToList();
 
             return Ok(result);
         }

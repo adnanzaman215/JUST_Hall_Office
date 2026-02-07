@@ -97,7 +97,7 @@ export default function PaymentsPage() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('http://192.168.0.116:8000/api/payments/all-dues', {
+      const response = await fetch('http://localhost:8000/api/payments/all-dues', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -105,6 +105,26 @@ export default function PaymentsPage() {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Ensure current year is always included
+        const currentYear = new Date().getFullYear();
+        const hasCurrentYear = data.some((dues: PaymentDues) => dues.currentYear === currentYear);
+        
+        if (!hasCurrentYear) {
+          // Add current year if not present
+          data.unshift({
+            currentYear: currentYear,
+            requiredAmount: 15000,
+            paidAmount: 0,
+            dueAmount: 15000,
+            isPaid: false,
+            paymentsForYear: []
+          });
+        }
+        
+        // Sort by year descending (most recent first)
+        data.sort((a: PaymentDues, b: PaymentDues) => b.currentYear - a.currentYear);
+        
         setPaymentDues(data);
       } else {
         const errorData = await response.json();
@@ -120,7 +140,7 @@ export default function PaymentsPage() {
 
   const fetchPaymentHistory = async () => {
     try {
-      const response = await fetch('http://192.168.0.116:8000/api/payments/my-payments', {
+      const response = await fetch('http://localhost:8000/api/payments/my-payments', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -204,7 +224,7 @@ export default function PaymentsPage() {
       if (formData.notes) formDataToSend.append('notes', formData.notes);
       formDataToSend.append('receiptFile', receiptFile);
 
-      const response = await fetch('http://192.168.0.116:8000/api/payments/create', {
+      const response = await fetch('http://localhost:8000/api/payments/create', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -424,7 +444,7 @@ export default function PaymentsPage() {
                     )}
 
                     <a
-                      href={`http://192.168.0.116:8000/${payment.receiptUrl}`}
+                      href={`http://localhost:8000/${payment.receiptUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs font-medium"

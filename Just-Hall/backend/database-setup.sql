@@ -39,7 +39,7 @@ CREATE TABLE users_student (
     student_id VARCHAR(50) NOT NULL UNIQUE,
     department VARCHAR(100) NOT NULL,
     session VARCHAR(100) DEFAULT '',
-    room_no INT DEFAULT 0,
+    room_no VARCHAR(20) NULL,
     dob DATE NULL,
     gender VARCHAR(10) DEFAULT '',
     blood_group VARCHAR(5) DEFAULT '',

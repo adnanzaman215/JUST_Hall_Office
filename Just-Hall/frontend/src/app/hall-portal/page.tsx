@@ -157,36 +157,7 @@ export default function HallPortal() {
 
           {/* Show only to superusers/admins */}
           {isSuperUser && (
-            <>
-              {/* Admin Welcome Banner */}
-              <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-8 text-white shadow-2xl">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-3xl">
-                    👨‍💼
-                  </div>
-                  <div>
-                    <h2 className="text-2xl md:text-3xl font-bold">Admin Dashboard</h2>
-                    <p className="text-white/90 text-sm md:text-base">Welcome back! Manage applications and student seats</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 mt-6">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                    <p className="text-white/80 text-xs font-semibold uppercase tracking-wide mb-1">Total Applications</p>
-                    <p className="text-3xl font-bold">-</p>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                    <p className="text-white/80 text-xs font-semibold uppercase tracking-wide mb-1">Pending Review</p>
-                    <p className="text-3xl font-bold">-</p>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                    <p className="text-white/80 text-xs font-semibold uppercase tracking-wide mb-1">Approved</p>
-                    <p className="text-3xl font-bold">-</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Admin Action Cards */}
-              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                 {/* View Applications Card */}
                 <div className="group bg-white rounded-2xl shadow-xl border border-slate-200 hover:shadow-2xl transition-all duration-300 overflow-hidden">
                   <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-6">
@@ -318,7 +289,6 @@ export default function HallPortal() {
                   </div>
                 </div>
               </div>
-            </>
           )}
         </section>
       </div>
